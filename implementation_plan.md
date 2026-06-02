@@ -1,272 +1,121 @@
-# Plan de Implementación: Simulador Multitopología BJT (CE, CC, CB)
+# Plan de Implementación: Simulador Cascada BJT de 1 o 2 Etapas
 
-Este plan de implementación detalla la arquitectura, el diseño de la interfaz y, de manera rigurosa, el **modelo matemático de corriente continua (DC) y corriente alterna (AC) de pequeña señal** para las tres configuraciones de amplificadores con transistores bipolares NPN ($Q_1$):
-1. **Emisor Común (CE - Common Emitter)**
-2. **Colector Común / Seguidor de Emisor (CC - Common Collector / Emitter Follower)**
-3. **Base Común (CB - Common Base)**
-
-El simulador se basa en un motor matemático en tiempo real que modela la respuesta del circuito dinámicamente según los parámetros configurados con los controles deslizantes (sliders).
+Este plan describe la arquitectura técnica, modelo matemático de acoplamiento y diseño de interfaz para expandir el simulador a un sistema **multietapa cascada de 1 o 2 etapas**. El usuario podrá habilitar una segunda etapa amplificadora y seleccionar de forma independiente la topología (CE, CC, CB) para cada etapa, visualizando el acoplamiento de señales y efectos de carga en tiempo real.
 
 ---
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Para soportar las tres configuraciones de forma limpia y responsiva, implementaremos **tres esquemas vectoriales SVG de alta definición independientes e incrustados** en `index.html`. Usaremos CSS para mostrar el esquema de la configuración activa y ocultar los demás (`display: block` vs `display: none`). Esto garantizará una transición fluida y mantendrá el resaltado dinámico de componentes en cada circuito al pasar el cursor sobre los sliders de control.
->
-> Recomiendo encarecidamente que mantengamos el proyecto en el subdirectorio activo:
-> `C:\Users\ptorr\.gemini\antigravity\scratch\transistor-amplifier-simulator`
-> Una vez aprobado este plan, mantendremos sincronizados los archivos de la simulación.
+> **Efecto de Carga AC entre Etapas**: En un sistema de 2 etapas, la impedancia de entrada de la Etapa 2 ($Z_{in,2}$) actúa como la resistencia de carga de CA de la Etapa 1 ($rc_{1,ac} = Rc_1 \parallel Z_{in,2}$). Esto significa que cambiar cualquier parámetro en la Etapa 2 (como su resistencia de base o su beta) alterará dinámicamente la ganancia y la respuesta en frecuencia de la Etapa 1. Implementaremos este acoplamiento electrónico real en el motor matemático.
+
+> [!TIP]
+> **Distribución de la Interfaz (UI) para 2 Etapas**:
+> 1. **Controles de Parámetros**: Para evitar saturar la pantalla con 20 sliders, agregaremos pestañas internas en el panel izquierdo: `[ Etapa 1 ]` e `[ Etapa 2 ]`. Al pulsar una pestaña, se mostrarán los sliders correspondientes a esa etapa. La tensión de alimentación $V_{cc}$, la señal de entrada $V_{in}$, la frecuencia y la carga $Rl$ serán comunes y visibles globalmente.
+> 2. **Esquema SVG**: Cuando se activen 2 etapas, mostraremos los dos esquemas SVG elegidos uno al lado del otro, conectados visualmente por un condensador de acoplamiento interetapa ($C_c$).
+> 3. **Osciloscopio Dual**: Mostraremos dos pantallas de osciloscopio en el panel derecho:
+>    * *Osciloscopio 1 (Etapa 1)*: Entrada global $V_{in}$ vs Salida de la Etapa 1 ($V_{out,1}$).
+>    * *Osciloscopio 2 (Respuesta Global)*: Entrada global $V_{in}$ vs Salida final de la Etapa 2 ($V_{out,2}$).
+> 4. **Recta de Carga**: Añadiremos un selector de pestañas `[ Recta Etapa 1 ]` y `[ Recta Etapa 2 ]` dentro del panel de la recta de carga para alternar entre el punto Q de cada transistor.
+> 5. **Slider de Acoplamiento ($C_c$)**: Se añadirá un slider en el panel de parámetros de CA comunes para ajustar el valor del condensador de acoplamiento interetapa $C_c$ (con valor predeterminado de $10\ \mu\text{F}$, rango de $0.1\ \mu\text{F}$ a $100\ \mu\text{F}$).
 
 ---
 
-## Modelos Matemáticos Completos y Nomenclatura del Circuito
+## Modelo Matemático de Acoplamiento Multietapa
 
-A continuación se presentan las ecuaciones exactas que rigen la simulación en tiempo real. Todas las ecuaciones emplean de forma estricta la nomenclatura de los componentes visualizados en los esquemas interactivos de la aplicación:
+### 1. Polarización DC (Punto Q Independiente)
+Dado que las etapas están acopladas mediante un condensador de CA ($C_c$), sus circuitos de corriente continua están completamente aislados:
+* **Etapa 1**: Se calculan $Ib_1, Ic_1, Ve_1, Vc_1, Vce_1$ usando sus propios resistores ($R_{1,1}, R_{2,1}, Rc_1, Re_1$) y $\beta_1$.
+* **Etapa 2**: Se calculan $Ib_2, Ic_2, Ve_2, Vc_2, Vce_2$ usando sus propios resistores ($R_{1,2}, R_{2,2}, Rc_2, Re_2$) y $\beta_2$.
 
-* **$V_{cc}$**: Tensión de alimentación de CC (raíl superior de alimentación).
-* **$R_1$**: Resistencia superior del divisor de tensión de base.
-* **$R_2$**: Resistencia inferior del divisor de tensión de base.
-* **$Rc$**: Resistencia de colector (no presente en la topología CC, donde el colector se conecta directamente a $V_{cc}$).
-* **$Re$**: Resistencia de emisor conectada entre el emisor del transistor y tierra (GND).
-* **$Rl$**: Resistencia de carga externa acoplada en CA.
-* **$Q_1$**: Transistor BJT NPN, caracterizado por su ganancia de corriente beta ($\beta$ o $h_{fe}$).
-* **$C_1$**: Condensador de acoplamiento de entrada.
-* **$C_2$**: Condensador de acoplamiento de salida.
-* **$Ce$**: Condensador de derivación (bypass) de emisor (exclusivo de CE).
-* **$Cb$**: Condensador de derivación (bypass) de base a tierra (exclusivo de CB, etiquetado como `Cb`).
-* **$R_g$**: Resistencia interna del generador de señal de CA ($R_g = 600\ \Omega$).
-* **$V_{in}$**: Voltaje pico de la señal de entrada de CA.
-* **$f$**: Frecuencia de la señal de entrada.
+### 2. Análisis AC y Acoplamiento de Impedancias
+La impedancia de entrada de la segunda etapa ($Z_{in,2}$) carga dinámicamente a la primera etapa.
 
-```mermaid
-graph TD
-    classDef ce fill:#ff007f,stroke:#ff007f,stroke-width:1px,color:#fff;
-    classDef cc fill:#00f2fe,stroke:#00f2fe,stroke-width:1px,color:#111;
-    classDef cb fill:#ffb700,stroke:#ffb700,stroke-width:1px,color:#111;
+#### A. Parámetros de la Etapa 2 (Cargada por $Rl$)
+* Resistencia dinámica: $re_2 = 25\text{ mV} / Ic_2$
+* **Impedancia de Entrada ($Z_{in,2}$):**
+  * *Si Etapa 2 es CE con bypass ($Ce_2$)*: $Z_{in,2} = R_{1,2} \parallel R_{2,2} \parallel (\beta_2 \cdot re_2)$
+  * *Si Etapa 2 es CE sin bypass ($Ce_2$)*: $Z_{in,2} = R_{1,2} \parallel R_{2,2} \parallel [\beta_2 \cdot (re_2 + Re_2)]$
+  * *Si Etapa 2 es CC*: $Z_{in,2} = R_{1,2} \parallel R_{2,2} \parallel [\beta_2 \cdot (re_2 + Re_2 \parallel Rl)]$
+  * *Si Etapa 2 es CB*: $Z_{in,2} = Re_2 \parallel re_2$
+* **Ganancia de Tensión de la Etapa 2 ($Av_2$):**
+  * *Si Etapa 2 es CE (con bypass)*: $Av_{2,mid} = -\frac{Rc_2 \parallel Rl}{re_2}$
+  * *Si Etapa 2 es CE (sin bypass)*: $Av_{2,mid} = -\frac{Rc_2 \parallel Rl}{re_2 + Re_2}$
+  * *Si Etapa 2 es CC*: $Av_{2,mid} = \frac{Re_2 \parallel Rl}{re_2 + Re_2 \parallel Rl}$
+  * *Si Etapa 2 es CB*: $Av_{2,mid} = \frac{Rc_2 \parallel Rl}{re_2}$
 
-    Selector[Selector de Configuración] --> CE[Emisor Común (CE)]:::ce
-    Selector --> CC[Colector Común (CC)]:::cc
-    Selector --> CB[Base Común (CB)]:::cb
+#### B. Parámetros de la Etapa 1 (Cargada por $Z_{in,2}$)
+* Resistencia dinámica: $re_1 = 25\text{ mV} / Ic_1$
+* **Impedancia de Entrada ($Z_{in,1}$):**
+  * *Si Etapa 1 es CE con bypass ($Ce_1$)*: $Z_{in,1} = R_{1,1} \parallel R_{2,1} \parallel (\beta_1 \cdot re_1)$
+  * *Si Etapa 1 es CE sin bypass ($Ce_1$)*: $Z_{in,1} = R_{1,1} \parallel R_{2,1} \parallel [\beta_1 \cdot (re_1 + Re_1)]$
+  * *Si Etapa 1 es CC*: $Z_{in,1} = R_{1,1} \parallel R_{2,1} \parallel [\beta_1 \cdot (re_1 + Re_1 \parallel Z_{in,2})]$
+  * *Si Etapa 1 es CB*: $Z_{in,1} = Re_1 \parallel re_1$
+* **Ganancia de Tensión de la Etapa 1 ($Av_1$):**
+  * Definimos la carga de colector/emisor en AC ($r_{load,1}$):
+    * *Si Etapa 1 es CE o CB*: $r_{load,1} = Rc_1 \parallel Z_{in,2}$
+    * *Si Etapa 1 es CC*: $r_{load,1} = Re_1 \parallel Z_{in,2}$
+  * La ganancia $Av_{1,mid}$ se calcula con esta carga:
+    * *Si Etapa 1 es CE (con bypass)*: $Av_{1,mid} = -\frac{r_{load,1}}{re_1}$
+    * *Si Etapa 1 es CE (sin bypass)*: $Av_{1,mid} = -\frac{r_{load,1}}{re_1 + Re_1}$
+    * *Si Etapa 1 es CC*: $Av_{1,mid} = \frac{r_{load,1}}{re_1 + r_{load,1}}$
+    * *Si Etapa 1 es CB*: $Av_{1,mid} = \frac{r_{load,1}}{re_1}$
 
-    CE --> CE_Eq[Entrada: Base / Salida: Colector<br>Ganancia Av Alta e Invertida -180°<br>Impedancia Zin Moderada]:::ce
-    CC --> CC_Eq[Entrada: Base / Salida: Emisor<br>Ganancia Av ≈ 1 En Fase<br>Impedancia Zin Muy Alta]:::cc
-    CB --> CB_Eq[Entrada: Emisor / Salida: Colector<br>Ganancia Av Alta En Fase<br>Impedancia Zin Muy Baja]:::cb
-```
+#### C. Ganancia Total del Sistema ($Av_{total}$)
+Considerando la atenuación de entrada por la resistencia del generador $R_g = 600\  \Omega$:
+$$Av_{total} = \frac{Z_{in,1}}{Rg + Z_{in,1}} \cdot Av_{1} \cdot Av_{2}$$
 
----
+### 3. Respuesta en Frecuencia Completa
+* **Polos de baja frecuencia ($f_L$):**
+  $$f_{L1} = \frac{1}{2\pi C_1(R_g + Z_{in,1})} \quad (\text{Polo de Entrada})$$
+  $$f_{L2} = \frac{1}{2\pi C_2(R_{out,2} + Rl)} \quad (\text{Polo de Salida})$$
+  $$f_{L,c} = \frac{1}{2\pi C_c(R_{out,1} + Z_{in,2})} \quad (\text{Polo de Acoplamiento Interetapa})$$
+  $$f_{Le1}, f_{Le2} \quad (\text{Polos de bypass de emisor/base para cada etapa})$$
+  $$f_L = \sqrt{f_{L1}^2 + f_{L2}^2 + f_{L,c}^2 + f_{Le1}^2 + f_{Le2}^2}$$
+  *Donde $R_{out,1}$ es $Rc_1$ (para CE/CB) o $Re_1 \parallel \left(re_1 + \frac{R_{th1} \parallel Rg}{\beta_1}\right)$ (para CC).*
+  *Donde $R_{out,2}$ es $Rc_2$ (para CE/CB) o $Re_2 \parallel \left(re_2 + \frac{R_{th2} \parallel R_{out,1}}{\beta_2}\right)$ (para CC).*
 
-### 1. Polarización y Punto Q en Corriente Continua (DC)
+* **Polos de alta frecuencia ($f_H$):**
+  El límite superior de frecuencia de banda media se determina modelando individualmente el polo de cada transistor. La frecuencia $f_H$ total del sistema se aproximará considerando el efecto dominante del polo más bajo.
 
-Para las tres topologías, la base de $Q_1$ se polariza mediante un divisor de tensión formado por $R_1$ y $R_2$. El punto de operación en reposo (punto Q) se calcula de la siguiente manera:
-
-#### A. Equivalente de Thévenin en la Base
-* **Tensión de Thévenin ($V_{th}$):**
-  $$V_{th} = V_{cc} \cdot \frac{R_2}{R_1 + R_2}$$
-* **Resistencia de Thévenin ($R_{th}$):**
-  $$R_{th} = R_1 \parallel R_2 = \frac{R_1 \cdot R_2}{R_1 + R_2}$$
-
-#### B. Corrientes y Voltajes en Región Activa
-Si $V_{th} > V_{BE}$ (donde $V_{BE} = 0.7\text{ V}$ para el transistor de silicio $Q_1$):
-* **Corriente de base en reposo ($Ib$):**
-  $$Ib = \frac{V_{th} - V_{BE}}{R_{th} + (\beta + 1) \cdot Re}$$
-* **Corriente de colector en reposo ($Ic$):**
-  $$Ic = \beta \cdot Ib$$
-* **Corriente de emisor en reposo ($Ie$):**
-  $$Ie = (\beta + 1) \cdot Ib$$
-* **Voltaje de emisor en reposo ($Ve$):**
-  $$Ve = Ie \cdot Re$$
-
-* **Voltaje de colector en reposo ($Vc$):**
-  * **Emisor Común (CE) y Base Común (CB):** El colector se conecta a través de $Rc$.
-    $$Vc = V_{cc} - Ic \cdot Rc$$
-  * **Colector Común (CC):** El colector se conecta directamente a la alimentación $V_{cc}$.
-    $$Vc = V_{cc}$$
-
-* **Voltaje colector-emisor en reposo ($Vce$):**
-  $$Vce = Vc - Ve$$
-
-Si $V_{th} \le V_{BE}$, el transistor $Q_1$ se encuentra en estado de **CORTE** y se modela con:
-$$Ib = 0,\quad Ic = 0,\quad Ie = 0,\quad Ve = 0,\quad Vc = V_{cc}\text{ (en CE y CB)},\quad Vce = V_{cc}$$
-
-#### C. Condición y Valores de Saturación
-Si el voltaje calculado $Vce$ cae por debajo de la barrera de saturación del transistor ($V_{CE,sat} = 0.2\text{ V}$), el transistor entra en la región de **SATURACIÓN**, por lo que se recalculan los valores del punto Q:
-* **Para Emisor Común (CE) y Base Común (CB) [Circuitos con Rc y Re]:**
-  $$Ic = Ie = \frac{V_{cc} - V_{CE,sat}}{Rc + Re}$$
-  $$Ib = \frac{Ic}{\beta}$$
-  $$Ve = Ie \cdot Re$$
-  $$Vc = Ve + V_{CE,sat}$$
-  $$Vce = V_{CE,sat} = 0.2\text{ V}$$
-* **Para Colector Común (CC) [Circuito con Re, Colector a Vcc]:**
-  $$Ie = Ic = \frac{V_{cc} - V_{CE,sat}}{Re}$$
-  $$Ib = \frac{Ie}{\beta}$$
-  $$Ve = Ie \cdot Re = V_{cc} - V_{CE,sat}$$
-  $$Vc = V_{cc}$$
-  $$Vce = V_{CE,sat} = 0.2\text{ V}$$
-
----
-
-### 2. Análisis Dinámico en Corriente Alterna (AC) de Pequeña Señal
-
-En la zona de operación activa, se define la **resistencia dinámica intrínseca del emisor ($re$)** en base al voltaje térmico ($V_T = 25\text{ mV}$):
-$$re = \frac{V_T}{Ic}$$
-
-#### A. Configuración de Emisor Común (CE)
-* **Resistencia de colector de CA ($rc_{ac}$):**
-  $$rc_{ac} = Rc \parallel Rl = \frac{Rc \cdot Rl}{Rc + Rl}$$
-* **Impedancia de entrada ($Z_{in}$):**
-  * **Con Condensador de Bypass ($Ce$ activo):**
-    $$Z_{in} = R_1 \parallel R_2 \parallel (\beta \cdot re) = R_{th} \parallel (\beta \cdot re)$$
-  * **Sin Condensador de Bypass ($Ce$ inactivo):**
-    $$Z_{in} = R_1 \parallel R_2 \parallel [\beta \cdot (re + Re)] = R_{th} \parallel [\beta \cdot (re + Re)]$$
-* **Ganancia de Tensión de Banda Media ($Av_{mid}$):**
-  * **Con Condensador de Bypass ($Ce$ activo):**
-    $$Av_{mid} = -\frac{rc_{ac}}{re}$$
-    *(Desfase de $180^\circ$, señal invertida)*
-  * **Sin Condensador de Bypass ($Ce$ inactivo):**
-    $$Av_{mid} = -\frac{rc_{ac}}{re + Re}$$
-    *(Desfase de $180^\circ$, señal invertida)*
-
-#### B. Configuración de Colector Común (CC - Seguidor de Emisor)
-* **Resistencia de emisor de CA ($re_{ac}$):**
-  $$re_{ac} = Re \parallel Rl = \frac{Re \cdot Rl}{Re + Rl}$$
-* **Impedancia de entrada ($Z_{in}$):**
-  $$Z_{in} = R_1 \parallel R_2 \parallel [\beta \cdot (re + re_{ac})] = R_{th} \parallel [\beta \cdot (re + re_{ac})]$$
-  *(Impedancia extremadamente alta, $>100\text{ k}\Omega$)*
-* **Ganancia de Tensión de Banda Media ($Av_{mid}$):**
-  $$Av_{mid} = \frac{re_{ac}}{re + re_{ac}}$$
-  *(Ganancia positiva en fase, ligeramente menor que 1, $\approx 0.95 - 0.99$)*
-
-#### C. Configuración de Base Común (CB)
-* **Resistencia de colector de CA ($rc_{ac}$):**
-  $$rc_{ac} = Rc \parallel Rl = \frac{Rc \cdot Rl}{Rc + Rl}$$
-* **Impedancia de entrada ($Z_{in}$):**
-  La señal de entrada se inyecta directamente por el emisor del transistor $Q_1$:
-  $$Z_{in} = Re \parallel re = \frac{Re \cdot re}{Re + re}$$
-  *(Impedancia sumamente baja, típicamente de unos pocos ohmios: $5\ \Omega$ a $50\ \Omega$)*
-* **Ganancia de Tensión de Banda Media ($Av_{mid}$):**
-  $$Av_{mid} = \frac{rc_{ac}}{re}$$
-  *(Ganancia alta y en fase, idéntica en magnitud a CE con bypass, pero sin inversión de fase)*
-
----
-
-### 3. Respuesta en Frecuencia y Modelado de Polos
-
-El comportamiento en frecuencia del amplificador se modela mediante polos de baja y alta frecuencia para simular el ancho de banda real:
-
-#### A. Frecuencia de Corte de Baja Frecuencia ($f_L$) - Filtro Pasa Altos
-Está determinada por los acoplamientos capacitivos y de bypass:
-
-1. **Polo de entrada ($f_{L1}$):** Depende de la impedancia de entrada y de la resistencia del generador $R_g$ ($600\ \Omega$):
-   $$f_{L1} = \frac{1}{2\pi \cdot C_1 \cdot (R_g + Z_{in})}$$
-2. **Polo de salida ($f_{L2}$):**
-   * **CE y CB:**
-     $$f_{L2} = \frac{1}{2\pi \cdot C_2 \cdot (Rc + Rl)}$$
-   * **CC:**
-     $$f_{L2} = \frac{1}{2\pi \cdot C_2 \cdot (R_{eq,e,ac} + Rl)}, \quad \text{donde } R_{eq,e,ac} = Re \parallel \left(re + \frac{R_{th} \parallel R_g}{\beta}\right)$$
-3. **Polo de derivación / Bypass ($f_{Le}$):**
-   * **CE (con $Ce$ activo):**
-     $$f_{Le} = \frac{1}{2\pi \cdot C_e \cdot R_{eq,e}}, \quad \text{donde } R_{eq,e} = Re \parallel \left(re + \frac{R_{th} \parallel R_g}{\beta}\right)$$
-     *(Si $Ce$ está inactivo, $f_{Le} = 0$)*
-   * **CC:** No aplica condensador de bypass ($f_{Le} = 0$).
-   * **CB (con condensador de bypass de base $Cb$):**
-     $$f_{Le} = \frac{1}{2\pi \cdot C_b \cdot R_{eq,b}}, \quad \text{donde } R_{eq,b} = \frac{R_{th}}{\beta + 1}$$
-4. **Frecuencia de corte inferior total ($f_L$):**
-   $$f_L = \sqrt{f_{L1}^2 + f_{L2}^2 + f_{Le}^2}$$
-
-#### B. Frecuencia de Corte de Alta Frecuencia ($f_H$) - Filtro Pasa Bajos
-Se calcula a partir de las capacitancias internas del transistor NPN ($C_{be} = 25\text{ pF}$, $C_{bc} = 5\text{ pF}$):
-
-1. **Emisor Común (CE) y Colector Común (CC):** Sufren el **Efecto Miller** en la capacitancia de entrada:
-   * **Capacitancia Miller ($C_M$):**
-     $$C_M = C_{bc} \cdot (1 + |Av_{mid}|)$$
-   * **Capacitancia de entrada total ($C_{in,H}$):**
-     $$C_{in,H} = C_{be} + C_M$$
-   * **Resistencia equivalente de entrada ($R_{eq,H}$):**
-     $$R_{eq,H} = R_g \parallel R_{th} = \frac{R_g \cdot R_{th}}{R_g + R_{th}}$$
-   * **Frecuencia de corte superior ($f_H$):**
-     $$f_H = \frac{1}{2\pi \cdot R_{eq,H} \cdot C_{in,H}}$$
-2. **Base Común (CB):** La base se conecta dinámicamente a tierra a través de $Cb$, por lo que el **Efecto Miller es nulo** ($C_M \approx 0$). Esto elimina la realimentación capacitiva de colector a base:
-   * **Capacitancia de entrada total ($C_{in,H}$):**
-     $$C_{in,H} = C_{be}$$
-   * **Resistencia equivalente de entrada ($R_{eq,H}$):**
-     $$R_{eq,H} = R_g \parallel Z_{in} \approx Z_{in}\text{ (ya que } Z_{in} \ll R_g\text{)}$$
-   * **Frecuencia de corte superior ($f_H$):**
-     $$f_H = \frac{1}{2\pi \cdot R_{eq,H} \cdot C_{in,H}}$$
-
-#### C. Ganancia Final de CA y Desfase Dinámico
-* **Factor de atenuación por frecuencia:**
-  $$A(f) = \frac{1}{\sqrt{1 + \left(\frac{f}{f_H}\right)^2}} \cdot \frac{1}{\sqrt{1 + \left(\frac{f_L}{f}\right)^2}}$$
-* **Ganancia de voltaje final calculada ($Av$):**
-  $$Av = Av_{mid} \cdot A(f)$$
-* **Ángulo de fase dinámico en grados ($\phi$):**
-  $$\phi_L = \arctan\left(\frac{f_L}{f}\right), \quad \phi_H = -\arctan\left(\frac{f}{f_H}\right)$$
-  $$\phi_{\text{total}} = (\phi_L + \phi_H) \cdot \frac{180^\circ}{\pi}$$
-  *(Si la topología es CE, se suma un desfase de $180^\circ$ debido al signo negativo de la ganancia)*
-
----
-
-### 4. Límites de Oscilación y Simulación de Recorte (Clipping)
-
-El voltaje instantáneo de salida se recorta de forma realista basándose en los límites físicos dinámicos de cada topología y el punto Q correspondiente:
-
-* **Configuración de Emisor Común (CE):**
-  La señal de salida se toma en el colector ($Vc$). El voltaje dinámico de colector $v_c(t)$ está limitado por:
-  * **Saturación (Límite Inferior):**
-    $$v_c(t)_{\min} = Ve + V_{CE,sat} = Ve + 0.2\text{ V}$$
-  * **Corte (Límite Superior):**
-    $$v_c(t)_{\max} = V_{cc}$$
-  * Si la señal de salida teórica supera estos límites, se produce un recorte plano de onda (clipping) arriba ($V_{cc}$) e inferior ($Ve + 0.2\text{ V}$).
-
-* **Configuración de Colector Común (CC):**
-  La señal de salida se toma en el emisor ($Ve$). El voltaje dinámico de emisor $v_e(t)$ está acotado por:
-  * **Corte (Límite Inferior):**
-    $$v_e(t)_{\min} = 0\text{ V}$$
-  * **Saturación (Límite Superior):**
-    $$v_e(t)_{\max} = V_{cc} - V_{CE,sat} = V_{cc} - 0.2\text{ V}$$
-
-* **Configuración de Base Común (CB):**
-  La señal de salida se toma en el colector ($Vc$). El voltaje dinámico de colector $v_c(t)$ está limitado por:
-  * **Saturación (Límite Inferior):**
-    $$v_c(t)_{\min} = V_b = Ve + V_{BE} = Ve + 0.7\text{ V}$$
-    *(El transistor satura cuando el colector cae por debajo del potencial de base)*
-  * **Corte (Límite Superior):**
-    $$v_c(t)_{\max} = V_{cc}$$
+### 4. Límites de Recorte (Clipping) Dinámicos
+* **Etapa 1**: Recorta su tensión de salida según sus límites propios ($V_{cc}$ y $Ve_1 + V_{CE,sat}$). La señal recortada ingresa directamente a la Etapa 2.
+* **Etapa 2**: Recorta la señal amplificada final de acuerdo con sus propios límites ($V_{cc}$ y $Ve_2 + V_{CE,sat}$). Esto simulará perfectamente la distorsión en cascada (donde la primera etapa puede recortar la señal antes de que la segunda la vuelva a amplificar o recortar).
 
 ---
 
 ## Propuesta de Cambios en los Archivos
 
-### 1. `[MODIFY]` [index.html](file:///C:/Users/ptorr/..gemini/antigravity/scratch/transistor-amplifier-simulator/index.html)
-* **Selector de Topología**: Añadiremos un control visual de pestañas fluorescentes en el encabezado: "Emisor Común", "Colector Común", "Base Común".
-* **Esquemas SVG triplicados**:
-  * `svg-ce`: Esquema tradicional de Emisor Común.
-  * `svg-cc`: Esquema de Colector Común (colector directo a $V_{cc}$, salida en el emisor, sin condensador $Ce$).
-  * `svg-cb`: Esquema de Base Común (base puenteada a tierra mediante condensador de bypass de base $Cb$, entrada en emisor, salida en colector).
-* **Modificación de Sliders**: Algunos sliders se desactivarán visualmente si no aplican a la topología activa (por ejemplo, el interruptor de $Ce$ no aplica en Colector Común).
+### 1. [index.html](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/index.html)
+* **Selector de Etapas**: Agregar un botón selector en el header: `[ 1 Etapa ]` e `[ 2 Etapas ]`.
+* **Pestañas de Control**: Agregar botones de pestañas en el panel de parámetros: `[ Etapa 1 ]` e `[ Etapa 2 ]` para conmutar los conjuntos de sliders.
+* **Duplicar Sliders**: Duplicar los sliders de parámetros DC ($R_1, R_2, Rc, Re, \beta, Ce$) asignándoles IDs diferenciados (`param-r1-2`, `param-r2-2`, etc.) y agruparlos en un contenedor que se ocultará/mostrará mediante CSS.
+* **Slider de $C_c$**: Agregar un slider de acoplamiento de CA en el panel común para regular la capacidad de $C_c$ ($10\ \mu\text{F}$ por defecto).
+* **Esquemas SVG**: Crear un contenedor responsivo que pueda albergar dos diagramas SVG contiguos de menor tamaño conectados por un gráfico de condensador $C_c$.
+* **Segundo Canvas de Osciloscopio**: Añadir `<canvas id="canvas-oscilloscope-2" ...>` al panel de gráficos.
 
-### 2. `[MODIFY]` [style.css](file:///C:/Users/ptorr/..gemini/antigravity/scratch/transistor-amplifier-simulator/style.css)
-* Clases CSS para ocultar/mostrar los esquemas activos:
-  ```css
-  .schematic-wrapper svg { display: none; }
-  .schematic-wrapper svg.active { display: block; }
-  ```
-* Estilo visual para las pestañas de selección de topología en el encabezado (efecto brillante neon).
-* Estilos para controles desactivados (opacidad reducida e interactividad bloqueada).
+### 2. [style.css](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/style.css)
+* Clases y estilos de maquetación para organizar los sliders en sub-pestañas.
+* Soporte flexbox/grid para posicionar dos SVG lado a lado de forma responsiva.
+* Soporte para mostrar dos pantallas de osciloscopio apiladas o una al lado de la otra en pantallas anchas.
 
-### 3. `[MODIFY]` [app.js](file:///C:/Users/ptorr/..gemini/antigravity/scratch/transistor-amplifier-simulator/app.js)
-* **Variable de Estado**: `activeConfig = 'CE'` (o 'CC', 'CB').
-* **Ecuaciones Dinámicas**: Reemplazar la sección de pequeña señal con una estructura `switch(activeConfig)` que aplique las fórmulas del modelo matemático descritas arriba.
-* **Trazado de Señales**: Adaptar la ecuación de salida del osciloscopio y aplicar los límites dinámicos de recorte (clipping).
+### 3. [app.js](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/app.js)
+* **Estado global**: `numStages = 1` (o 2). Agregar variables de estado para la topología de la Etapa 1 y la Etapa 2 (`activeConfig1`, `activeConfig2`).
+* **Motor matemático**: Reescribir `runBjtSimulation()` para calcular secuencialmente la Etapa 2, obtener su impedancia de entrada $Z_{in,2}$, aplicar esta impedancia como carga a la Etapa 1, y calcular la respuesta total.
+* **Osciloscopio**: Renderizar las formas de onda en ambos canvas. El segundo osciloscopio dibujará la señal global $V_{in}$ vs $V_{out,2}$.
+* **Recta de Carga**: Dibujar la recta y punto Q de la etapa seleccionada mediante un conmutador visual.
 
 ---
 
 ## Plan de Verificación
 
-1. **Prueba de Transición de Esquemas**: Al pulsar "Colector Común" o "Base Común", el esquema SVG interactivo debe cambiar instantáneamente al circuito respectivo e iluminar sus componentes al pasar el ratón sobre los sliders correspondientes.
-2. **Prueba de Ganancia en Colector Común**:
-   * En CC, verificar que la ganancia visualizada ($Av$) sea positiva (por ejemplo: `+0.98x`), que la señal en el osciloscopio esté perfectamente en fase con la entrada y que la impedancia de entrada calculada sea sumamente elevada ($Z_{in} > 100\text{ k}\Omega$).
-3. **Prueba de Impedancia en Base Común**:
-   * En CB, verificar que la impedancia de entrada $Z_{in}$ caiga a valores extremadamente bajos (entre $5\ \Omega$ y $50\ \Omega$), mientras que la ganancia $Av$ sea muy alta y positiva (sin inversión de fase).
-4. **Verificación de Presets Inteligentes**:
-   * Los preajustes rápidos de la parte superior se adaptarán a la topología activa para proporcionar simulaciones educativas instantáneas sin distorsión o con distorsión selectiva.
+1. **Verificación de Efecto de Carga**:
+   * Activar 2 Etapas.
+   * Con la Etapa 1 en CE, disminuir drásticamente $R_{1,2}$ y $R_{2,2}$ en la Etapa 2 (lo que reduce la impedancia de entrada $Z_{in,2}$).
+   * Verificar que la ganancia $Av_1$ de la primera etapa disminuya de forma correspondiente en las lecturas, demostrando el acoplamiento físico real.
+2. **Verificación de Fase en Cascada**:
+   * Configurar `CE` + `CE`: El desfase total debe ser de $360^\circ$ ($0^\circ$), por lo que la salida final estará en fase con la entrada global.
+   * Configurar `CE` + `CC`: El desfase total debe ser de $180^\circ$ (señal final invertida).
+3. **Verificación de Clipping en Cascada**:
+   * Incrementar $V_{in}$ hasta que el primer osciloscopio muestre recorte en $V_{out,1}$.
+   * Verificar que la señal en el segundo osciloscopio entre ya recortada y se amplifique con esa deformación, demostrando distorsión en cascada realista.

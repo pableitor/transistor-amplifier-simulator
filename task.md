@@ -1,25 +1,27 @@
-# Tareas: Simulador Multitopología BJT (CE, CC, CB)
+# Tareas: Simulador Cascada BJT de 1 o 2 Etapas
 
 - [x] Modificar la Estructura HTML (`index.html`)
-  - [x] Añadir barra de pestañas fluorescentes en el header para seleccionar CE, CC y CB
-  - [x] Integrar el segundo esquema SVG interactivo para Colector Común (CC)
-  - [x] Integrar el tercer esquema SVG interactivo para Base Común (CB)
-  - [x] Adaptar etiquetas de sliders y elementos semánticos para el soporte de las tres topologías
+  - [x] Añadir selector de número de etapas (1 o 2) en el header
+  - [x] Añadir selector de pestañas para configurar Etapa 1 o Etapa 2
+  - [x] Duplicar los sliders de parámetros DC para la Etapa 2
+  - [x] Añadir slider para el condensador de acoplamiento $C_c$ en CA común
+  - [x] Añadir contenedores para albergar el esquema SVG de la Etapa 2 y el acoplamiento visual
+  - [x] Añadir el segundo osciloscopio canvas (`canvas-oscilloscope-2`)
 - [x] Desarrollar los Estilos CSS en `style.css`
-  - [x] Diseñar las pestañas ciberpunk del selector de configuración
-  - [x] Implementar la conmutación de esquemas (ocultar/mostrar mediante clases `.active`)
-  - [x] Estilizar la retroalimentación visual de controles "desactivados" (opacidad reducida para sliders no aplicables)
-- [x] Ampliar el Motor Matemático y Lógica en `app.js`
-  - [x] Agregar controlador de cambio de pestaña para coordinar la topología activa
-  - [x] Programar las ecuaciones de polarización DC específicas (Colector conectado a $V_{cc}$ en CC, base polarizada en CB)
-  - [x] Programar los modelos AC de pequeña señal para CC (ganancia en fase ≈ 1, impedancia de entrada altísima) y CB (ganancia en fase alta, impedancia de entrada bajísima)
-  - [x] Adaptar el modelado de respuesta en frecuencia (calcular polos de acople y Miller específicos para cada topología)
-  - [x] Actualizar el mapeo interactivo de los tres esquemas SVG para que los sliders iluminen los componentes correctos de cada circuito
-- [x] Actualizar Visualización de Osciloscopio y Recta de Carga
-  - [x] Adaptar el desfase dinámico en el osciloscopio (180° solo para CE; 0° en fase para CC y CB)
-  - [x] Ajustar el multiplicador de visualización del osciloscopio en Base Común para compensar la baja resistencia de entrada
-  - [x] Asegurar que el punto dinámico AC sobre la recta de carga se balancee correctamente
-- [x] Pruebas y Validación de las Tres Topologías
-  - [x] Verificar que Emisor Común conserve su respuesta Hi-Fi de ganancia invertida
-  - [x] Comprobar que Colector Común muestre ganancia positiva <1 e impedancia >100 kΩ
-  - [x] Comprobar que Base Común responda con impedancia de entrada <50 Ω y ganancia positiva alta
+  - [x] Diseñar el selector de etapas y las pestañas internas de parámetros
+  - [x] Adaptar la visualización del layout para albergar dos esquemas SVG contiguos de forma responsiva
+  - [x] Adaptar la visualización para albergar dos pantallas de osciloscopio
+- [x] Ampliar el Motor Matemático en `app.js`
+  - [x] Manejar la lógica de selección de topologías independientes por etapa (`activeConfig1`, `activeConfig2`)
+  - [x] Programar la polarización DC independiente para ambas etapas
+  - [x] Programar el análisis de pequeña señal acoplado ($Z_{in,2}$ actúa como carga para la Etapa 1)
+  - [x] Calcular la respuesta en frecuencia total ($f_L, f_H$) considerando el polo interetapa $f_{L,c}$ de $C_c$
+  - [x] Implementar los límites de clipping dinámicos encadenados
+  - [x] Actualizar el mapeo de sliders y eventos hover para los dos esquemas SVG independientes
+- [x] Actualizar Visualización de Gráficos (Canvas)
+  - [x] Adaptar el osciloscopio 1 (Vin vs Vout1) y el osciloscopio 2 (Vin vs Vout2)
+  - [x] Adaptar la recta de carga con selector de etapa a graficar (Etapa 1 o Etapa 2)
+- [x] Pruebas y Validación
+  - [x] Verificar el efecto de carga de la Etapa 2 sobre la ganancia de la Etapa 1
+  - [x] Verificar el desfase final para las combinaciones de topologías (CE+CE, CE+CC, etc.)
+  - [x] Verificar el clipping acumulado en cascada

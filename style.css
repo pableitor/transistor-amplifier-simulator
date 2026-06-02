@@ -801,3 +801,69 @@ footer {
     padding: 1rem;
   }
 }
+
+/* ==========================================================================
+   Estilos Multietapa (1 vs 2 Etapas)
+   ========================================================================== */
+.stage-btn, .stage-tab-btn, .loadline-btn {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.stage-btn:hover:not(.active), .stage-tab-btn:hover:not(.active), .loadline-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-main) !important;
+}
+
+.stage-btn.active {
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+}
+
+.stage-tab-btn.active {
+  background: rgba(0, 242, 254, 0.08) !important;
+  border-left-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+}
+
+/* En caso de que la pestaña de etapa 2 esté activa, le damos un toque rosa */
+.stage-tab-btn[data-stage="2"].active {
+  background: rgba(255, 0, 127, 0.08) !important;
+  border-left-color: var(--accent-pink) !important;
+  color: var(--accent-pink) !important;
+}
+
+.loadline-btn.active {
+  background: var(--accent-pink) !important;
+  color: #fff !important;
+  box-shadow: 0 0 8px rgba(255, 0, 127, 0.3);
+}
+
+.loadline-btn[data-stage="2"].active {
+  background: var(--accent-cyan) !important;
+  color: #060813 !important;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
+}
+
+/* Adaptación del esquema en cascada */
+.schematic-stage {
+  transition: var(--transition-smooth);
+}
+
+#schematic-interstage-connector {
+  transition: var(--transition-smooth);
+}
+
+/* Ajustes de hover en SVG para la etapa 2 (usamos rosa para destacar que es de la segunda etapa) */
+.svg-active-2 {
+  stroke: var(--accent-pink) !important;
+  stroke-width: 3px !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 6px var(--accent-pink-glow)) !important;
+}
+.svg-active-text-2 {
+  fill: var(--accent-pink) !important;
+  font-weight: 700 !important;
+}
+
