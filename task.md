@@ -25,3 +25,13 @@
   - [x] Verificar el efecto de carga de la Etapa 2 sobre la ganancia de la Etapa 1
   - [x] Verificar el desfase final para las combinaciones de topologías (CE+CE, CE+CC, etc.)
   - [x] Verificar el clipping acumulado en cascada
+- [x] Optimización Estética y de Altura del Dashboard
+  - [x] Reducir alturas máximas de los esquemas eléctricos (a 180px)
+  - [x] Mover la rejilla de métricas (DMM) a la parte inferior del dashboard
+  - [x] Reorganizar la rejilla de métricas a una sola fila de 4 columnas
+  - [x] Reducir los padding y márgenes de los gráficos para que quepan en una sola pantalla sin scrolling
+- [x] Simplificación de Acoplamiento Interetapa (Eliminar Cc)
+  - [x] Eliminar el slider de condensador Cc en los parámetros comunes de CA
+  - [x] Actualizar el esquema interetapa para unir la salida y entrada mediante un cable directo
+  - [x] Simplificar el cálculo del polo interetapa basándose en la capacidad equivalente de C2_etapa1 y C1_etapa2 en serie (~3.2 uF)
+

@@ -9,8 +9,8 @@ Hemos completado con éxito la actualización y expansión del **BJT Amplifier P
 1. **[index.html](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/index.html)**:
    * Incorpora el selector del número de etapas (`1 Etapa` o `2 Etapas`) en el encabezado.
    * Añade pestañas de control interno en el panel de parámetros (`Etapa 1` y `Etapa 2`) para conmutar dinámicamente los sliders asociados a cada transistor.
-   * Integra el condensador de acoplamiento interetapa ($C_c$) en el panel de parámetros comunes con rango ajustable (de $0.1\ \mu\text{F}$ a $100\ \mu\text{F}$).
-   * Duplica los tres esquemas vectoriales SVG (CE, CC, CB) para la Etapa 2 con IDs y componentes independientes, agregando un puente de condensador visual ($C_c$) para representar el acoplamiento físico en corriente alterna.
+   * Conecta la salida de la Etapa 1 directamente a la entrada de la Etapa 2, simplificando el circuito al eliminar el slider redundante del condensador $C_c$.
+   * Duplica los tres esquemas vectoriales SVG (CE, CC, CB) para la Etapa 2 con IDs y componentes independientes, agregando una línea de conexión interetapa directa que representa la unión en corriente alterna.
    * Añade una segunda recta de carga simultánea (`canvas-loadline-2`) y segunda pantalla de osciloscopio (`canvas-oscilloscope-2`) con escala de salida independiente.
    * Mueve las lecturas métricas (DMM) a un panel independiente en la parte inferior, despejando espacio para que los gráficos queden alineados directamente bajo los esquemas.
 
@@ -21,9 +21,9 @@ Hemos completado con éxito la actualización y expansión del **BJT Amplifier P
    * Optimiza el comportamiento responsivo flexbox para mostrar los esquemas y sus gráficos (recta de carga y osciloscopio de cada etapa) alineados verticalmente en columnas paralelas.
 
 3. **[app.js](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/app.js)**:
-   * **Polarización DC Independiente**: Calcula por separado el punto $Q$ de reposo ($V_{CEQ}$, $I_{CQ}$) para cada uno de los transistores BJT NPN de las etapas 1 y 2, dado que están aislados en corriente continua por el condensador $C_c$.
+   * **Polarización DC Independiente**: Calcula por separado el punto $Q$ de reposo ($V_{CEQ}$, $I_{CQ}$) para cada uno de los transistores BJT NPN de las etapas 1 y 2, dado que están aislados en corriente continua por los condensadores de acoplamiento ($C_2$ de la Etapa 1 y $C_1$ de la Etapa 2 en serie).
    * **Acoplamiento AC y Efecto de Carga**: Modifica el modelo de pequeña señal de modo que la impedancia de entrada de la Etapa 2 ($Z_{in,2}$) actúe dinámicamente como la resistencia de carga de CA de la Etapa 1 ($r_{load,1} = Rc_1 \parallel Z_{in,2}$ en CE/CB o $Re_1 \parallel Z_{in,2}$ en CC). Esto simula con precisión la atenuación de ganancia sufrida por la primera etapa al ser cargada por la segunda.
-   * **Respuesta en Frecuencia Completa**: Modela los polos de baja frecuencia incluyendo el efecto del condensador interetapa $C_c$ ($f_{L,c}$) y los polos individuales de bypass de emisor/base ($f_{Le1}$, $f_{Le2}$). La frecuencia de corte alta del sistema ($f_H$) se determina en cascada a través de las capacidades de Miller dinámicas y de base.
+   * **Respuesta en Frecuencia Completa**: Modela los polos de baja frecuencia incluyendo el polo interetapa ($f_{L,c}$) determinado por la combinación en serie de $C_2$ (Etapa 1) y $C_1$ (Etapa 2), con una capacidad equivalente de $\approx 3.2\ \mu\text{F}$. Los polos de bypass de emisor/base ($f_{Le1}$, $f_{Le2}$) también se calculan dinámicamente.
    * **Doble Recta de Carga y Osciloscopio Dual**: Renderiza de forma paralela y simultánea la recta de carga de la Etapa 1 y de la Etapa 2 (sin necesidad de pestañas), y dibuja en tiempo real ambos osciloscopios (salida de la etapa 1 y salida global), propagando el clipping de forma encadenada.
 
 ---

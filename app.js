@@ -49,8 +49,7 @@ const inputs = {
   ce_2: document.getElementById('param-ce-2'),
   voutScale_2: document.getElementById('param-vout-scale-2'),
   
-  // Acoplamiento Cc
-  cc: document.getElementById('param-cc'),
+
 };
 
 const readouts = {
@@ -72,7 +71,7 @@ const readouts = {
   rc_2: document.getElementById('val-rc-2'),
   re_2: document.getElementById('val-re-2'),
   beta_2: document.getElementById('val-beta-2'),
-  cc: document.getElementById('val-cc'),
+
   
   // DMM Lecturas
   vceq: document.getElementById('val-vceq'),
@@ -103,7 +102,7 @@ const ctxs = {
 const stageTabsWrapper = document.getElementById('stage-tabs-wrapper');
 const controlsStage1 = document.getElementById('controls-stage-1');
 const controlsStage2 = document.getElementById('controls-stage-2');
-const ctrlCc = document.getElementById('ctrl-cc');
+
 const cardOscilloscope2 = document.getElementById('card-oscilloscope-2');
 const inputVoutScale2 = document.getElementById('param-vout-scale-2');
 const readoutVoutScale2 = document.getElementById('val-vout-scale-2');
@@ -194,7 +193,10 @@ function runBjtSimulation() {
   const freqSlider = parseFloat(inputs.freq.value);
   const frequency = Math.pow(10, freqSlider);
   const Rl = parseFloat(inputs.rl.value) * 1000;
-  const Cc = parseFloat(inputs.cc.value) * 1e-6; // Cc en Faradios
+  // El condensador de acoplamiento equivalente es la serie de C2 de Etapa 1 (4.7 uF) y C1 de Etapa 2 (10 uF)
+  const C2_1 = 4.7e-6;
+  const C1_2 = 10e-6;
+  const C_coupling = (C2_1 * C1_2) / (C2_1 + C1_2); // ~3.2 µF equivalentes
 
   // 2. Obtener valores de la Etapa 1
   const R1_1 = parseFloat(inputs.r1.value) * 1000;
@@ -436,8 +438,8 @@ function runBjtSimulation() {
   if (numStages === 1) {
     fL2 = 1 / (2 * Math.PI * C2 * (Rout1 + Rl));
   } else {
-    // Polo del acoplamiento Cc
-    fL_c = 1 / (2 * Math.PI * Cc * (Rout1 + Zin2));
+    // Polo del acoplamiento interetapa usando la capacidad equivalente en serie
+    fL_c = 1 / (2 * Math.PI * C_coupling * (Rout1 + Zin2));
     
     // Polo de salida Etapa 2
     let Rout2 = Rc_2;
@@ -496,7 +498,7 @@ function runBjtSimulation() {
 
   // Guardar datos en el estado global
   simData = {
-    Vcc, Vin, frequency, Rl, Cc, fL, fH, Av, totalPhaseDeg, numStages,
+    Vcc, Vin, frequency, Rl, C_coupling, fL, fH, Av, totalPhaseDeg, numStages,
     // Etapa 1
     R1_1, R2_1, Rc_1, Re_1, beta_1, Ce_1, activeConfig1,
     Vth1, Rth1, Ib1, Ic1, Ie1, Ve1, Vc1, Vce1, state1, re1, Zin1, Av1_mid, Rout1,
@@ -535,9 +537,7 @@ function updateDmmReadouts() {
   }
   
   readouts.rl.textContent = `${inputs.rl.value} kΩ`;
-  if (readouts.cc) {
-    readouts.cc.textContent = `${parseFloat(inputs.cc.value).toFixed(1)} µF`;
-  }
+
 
   // 2. Parámetros de la Etapa 1
   readouts.r1.textContent = `${inputs.r1.value} kΩ`;
@@ -1434,7 +1434,7 @@ function setNumStages(stages) {
     if (stageTabsWrapper) stageTabsWrapper.style.display = 'none';
     if (controlsStage2) controlsStage2.style.display = 'none';
     if (controlsStage1) controlsStage1.style.display = 'block';
-    if (ctrlCc) ctrlCc.style.display = 'none';
+
     if (schematicStage2) schematicStage2.style.display = 'none';
     if (schematicConnector) schematicConnector.style.display = 'none';
     
@@ -1450,7 +1450,7 @@ function setNumStages(stages) {
     activeStageTab = 1;
   } else {
     if (stageTabsWrapper) stageTabsWrapper.style.display = 'flex';
-    if (ctrlCc) ctrlCc.style.display = 'block';
+
     if (schematicStage2) schematicStage2.style.display = 'block';
     if (schematicConnector) schematicConnector.style.display = 'flex';
     
