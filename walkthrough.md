@@ -11,19 +11,20 @@ Hemos completado con éxito la actualización y expansión del **BJT Amplifier P
    * Añade pestañas de control interno en el panel de parámetros (`Etapa 1` y `Etapa 2`) para conmutar dinámicamente los sliders asociados a cada transistor.
    * Integra el condensador de acoplamiento interetapa ($C_c$) en el panel de parámetros comunes con rango ajustable (de $0.1\ \mu\text{F}$ a $100\ \mu\text{F}$).
    * Duplica los tres esquemas vectoriales SVG (CE, CC, CB) para la Etapa 2 con IDs y componentes independientes, agregando un puente de condensador visual ($C_c$) para representar el acoplamiento físico en corriente alterna.
-   * Añade un conmutador de visualización de la recta de carga (`Etapa 1` / `Etapa 2`) para alternar el punto $Q$ de operación de cada transistor en pantalla.
-   * Incorpora la segunda pantalla de osciloscopio (`canvas-oscilloscope-2`) con escala de salida independiente (`param-vout-scale-2`) y su leyenda ciberpunk correspondiente.
+   * Añade una segunda recta de carga simultánea (`canvas-loadline-2`) y segunda pantalla de osciloscopio (`canvas-oscilloscope-2`) con escala de salida independiente.
+   * Mueve las lecturas métricas (DMM) a un panel independiente en la parte inferior, despejando espacio para que los gráficos queden alineados directamente bajo los esquemas.
 
 2. **[style.css](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/style.css)**:
-   * Diseña estilos adaptativos para los nuevos botones de selección de etapas, pestañas internas de control y botones de alternancia de recta de carga.
-   * Añade la paleta y clases de hover fluorescente rosa (`svg-active-2` y `svg-active-text-2`) para destacar de forma distintiva los componentes de la segunda etapa en el diagrama interactivo de circuitos.
-   * Optimiza el comportamiento responsivo flexbox para mostrar los diagramas SVG y las pantallas de osciloscopio apiladas o en paralelo de manera fluida y elegante.
+   * Diseña estilos adaptativos para los nuevos botones de selección de etapas y pestañas internas de control.
+   * Reduce la altura máxima de los esquemas eléctricos y ajusta los márgenes/paddings de las tarjetas de gráficos para lograr una maquetación compacta.
+   * Reorganiza la rejilla de métricas a una sola fila de 4 columnas horizontales a pie de página, maximizando el espacio vertical libre.
+   * Optimiza el comportamiento responsivo flexbox para mostrar los esquemas y sus gráficos (recta de carga y osciloscopio de cada etapa) alineados verticalmente en columnas paralelas.
 
 3. **[app.js](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/app.js)**:
    * **Polarización DC Independiente**: Calcula por separado el punto $Q$ de reposo ($V_{CEQ}$, $I_{CQ}$) para cada uno de los transistores BJT NPN de las etapas 1 y 2, dado que están aislados en corriente continua por el condensador $C_c$.
    * **Acoplamiento AC y Efecto de Carga**: Modifica el modelo de pequeña señal de modo que la impedancia de entrada de la Etapa 2 ($Z_{in,2}$) actúe dinámicamente como la resistencia de carga de CA de la Etapa 1 ($r_{load,1} = Rc_1 \parallel Z_{in,2}$ en CE/CB o $Re_1 \parallel Z_{in,2}$ en CC). Esto simula con precisión la atenuación de ganancia sufrida por la primera etapa al ser cargada por la segunda.
    * **Respuesta en Frecuencia Completa**: Modela los polos de baja frecuencia incluyendo el efecto del condensador interetapa $C_c$ ($f_{L,c}$) y los polos individuales de bypass de emisor/base ($f_{Le1}$, $f_{Le2}$). La frecuencia de corte alta del sistema ($f_H$) se determina en cascada a través de las capacidades de Miller dinámicas y de base.
-   * **Osciloscopio Dual y Clipping en Cascada**: Implementa las trazas en tiempo real de ambos osciloscopios. El osciloscopio 1 dibuja $V_{in}$ vs $V_{out,1}$ (salida de la etapa 1) y el osciloscopio 2 dibuja $V_{in}$ vs $V_{out,2}$ (salida global). Las distorsiones se propagan secuencialmente, permitiendo visualizar la deformación en cascada cuando la primera etapa recorta y la segunda etapa vuelve a amplificar o recortar dicho resultado.
+   * **Doble Recta de Carga y Osciloscopio Dual**: Renderiza de forma paralela y simultánea la recta de carga de la Etapa 1 y de la Etapa 2 (sin necesidad de pestañas), y dibuja en tiempo real ambos osciloscopios (salida de la etapa 1 y salida global), propagando el clipping de forma encadenada.
 
 ---
 
@@ -59,4 +60,4 @@ Hemos validado el motor físico mediante simulaciones programáticas automatizad
 3. Pulse sobre la pestaña **`Etapa 2`** en los controles. Cambie la topología del circuito en el header a **`Colector Común (CC)`**.
 4. Mueva los sliders de la `Etapa 2` y compruebe cómo la respuesta de la `Etapa 1` (primer osciloscopio) cambia debido al acoplamiento dinámico.
 5. Aumente la **Amplitud Entrada (Vin)** a $150\text{ mV}$ y observe cómo la señal de la Etapa 1 recorta primero, ingresando ya recortada al segundo osciloscopio, donde experimenta un recorte adicional correspondiente a los límites de la Etapa 2 (saturación y corte).
-6. Alterne las pestañas de **`Recta de Carga`** para verificar de forma visual el punto de operación $Q_1$ vs $Q_2$ de cada transistor individual.
+6. Observe ambas rectas de carga de forma simultánea en tiempo real para comparar los puntos de operación Q1 y Q2 y sus excursiones de señal.

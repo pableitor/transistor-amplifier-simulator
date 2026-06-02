@@ -18,7 +18,7 @@ El simulador modela con rigor físico y en tiempo real el acoplamiento de señal
   * **Osciloscopio 1 (Etapa 1)**: Muestra la señal de entrada $V_{in}$ superpuesta a la salida de la primera etapa $V_{out,1}$.
   * **Osciloscopio 2 (Respuesta Global)**: Muestra la señal de entrada $V_{in}$ frente a la salida final amplificada del sistema completo $V_{out,2}$.
   * Cada osciloscopio incluye controles independientes de zoom o escala visual.
-* **Recta de Carga DC Dinámica**: Conmutación interactiva entre la visualización del punto de operación $Q_1$ de la etapa 1 y $Q_2$ de la etapa 2, incluyendo su recta de corriente estática y la elipse dinámica que ilustra el balanceo de la señal.
+* **Recta de Carga DC Dinámica por Etapa**: Visualización simultánea del punto de operación $Q_1$ de la etapa 1 y $Q_2$ de la etapa 2 en gráficos paralelos alineados bajo sus respectivos esquemas vectoriales, ilustrando de forma instantánea el balanceo dinámico de la señal en CA.
 * **Respuesta en Frecuencia Completa**: Calcula el rango de frecuencias considerando la atenuación de entrada por la impedancia de base, el polo del condensador de acoplo de entrada $C_1$, de salida $C_2$, de acople interetapa $C_c$, de bypass $C_{e1}/C_{e2}$, y la atenuación en alta frecuencia debida al Efecto Miller.
 
 ---

@@ -16,8 +16,7 @@ const V_T = 0.025;       // Voltaje térmico a temperatura ambiente (25 mV)
 let numStages = 1;       // 1 o 2 etapas
 let activeConfig1 = 'CE'; // 'CE', 'CC', 'CB' para la Etapa 1
 let activeConfig2 = 'CC'; // 'CE', 'CC', 'CB' para la Etapa 2
-let activeStageTab = 1;  // Pestana activa en el panel de control (1 o 2)
-let activeLoadlineStage = 1; // Etapa graficada en la recta de carga (1 o 2)
+let activeStageTab = 1;  // Pestaña activa en el panel de control (1 o 2)
 
 let simData = {};
 let animationTime = 0;
@@ -88,13 +87,15 @@ const readouts = {
 // Canvas y Contextos
 const canvases = {
   loadline: document.getElementById('canvas-loadline'),
+  loadline2: document.getElementById('canvas-loadline-2'),
   oscilloscope: document.getElementById('canvas-oscilloscope'),
   oscilloscope2: document.getElementById('canvas-oscilloscope-2'),
 };
 
 const ctxs = {
-  loadline: canvases.loadline.getContext('2d'),
-  oscilloscope: canvases.oscilloscope.getContext('2d'),
+  loadline: canvases.loadline ? canvases.loadline.getContext('2d') : null,
+  loadline2: canvases.loadline2 ? canvases.loadline2.getContext('2d') : null,
+  oscilloscope: canvases.oscilloscope ? canvases.oscilloscope.getContext('2d') : null,
   oscilloscope2: canvases.oscilloscope2 ? canvases.oscilloscope2.getContext('2d') : null,
 };
 
@@ -108,7 +109,6 @@ const inputVoutScale2 = document.getElementById('param-vout-scale-2');
 const readoutVoutScale2 = document.getElementById('val-vout-scale-2');
 const legendOutput2 = document.getElementById('legend-output-label-2');
 const clippingIndicator2 = document.getElementById('clipping-indicator-2');
-const loadlineSelectWrapper = document.getElementById('loadline-select-wrapper');
 
 // Esquemas SVG
 const schematicTitle = document.getElementById('schematic-title');
@@ -641,11 +641,10 @@ function updateDmmReadouts() {
 }
 
 // ==========================================================================
-// RENDERIZADO GRÁFICO: Recta de Carga DC (Etapa 1 o Etapa 2)
+// RENDERIZADO GRÁFICO: Recta de Carga DC (Etapa 1 y Etapa 2)
 // ==========================================================================
-function drawLoadLine() {
-  const canvas = canvases.loadline;
-  const ctx = ctxs.loadline;
+function drawLoadLineStage(canvas, ctx, stageNum) {
+  if (!canvas || !ctx) return;
   const w = canvas.width;
   const h = canvas.height;
   
@@ -660,7 +659,7 @@ function drawLoadLine() {
   const graphH = h - padT - padB;
   
   // Dibujar Grilla
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
   ctx.lineWidth = 1;
   
   const gridLines = 5;
@@ -690,7 +689,6 @@ function drawLoadLine() {
   if (!simData.Vcc) return;
 
   // Cargar variables según la etapa a graficar
-  const stageNum = activeLoadlineStage;
   const Vce_s = stageNum === 1 ? simData.Vce1 : simData.Vce2;
   const Ic_s = stageNum === 1 ? simData.Ic1 : simData.Ic2;
   const activeConfig_s = stageNum === 1 ? simData.activeConfig1 : simData.activeConfig2;
@@ -725,7 +723,7 @@ function drawLoadLine() {
       ctx.fillText(`${v.toFixed(0)}V`, mapX(v), h - padB + 8);
     }
   }
-  ctx.fillText(`Vce (${stageNum === 1 ? 'Etapa 1' : 'Etapa 2'})`, padL + graphW / 2, h - 16);
+  ctx.fillText(`Vce (Etapa ${stageNum})`, padL + graphW / 2, h - 16);
   
   // Eje Y Etiquetas
   ctx.textAlign = 'right';
@@ -1143,7 +1141,10 @@ function drawOscilloscope2() {
 // ==========================================================================
 function animationLoop() {
   animationTime += 0.005;
-  drawLoadLine();
+  drawLoadLineStage(canvases.loadline, ctxs.loadline, 1);
+  if (numStages === 2) {
+    drawLoadLineStage(canvases.loadline2, ctxs.loadline2, 2);
+  }
   drawOscilloscope();
   drawOscilloscope2();
   requestAnimationFrame(animationLoop);
@@ -1422,38 +1423,13 @@ function setupStageControls() {
       runBjtSimulation();
     });
   });
-
-  // 3. Conmutador de recta de carga (Etapa 1 / Etapa 2)
-  const loadlineBtns = document.querySelectorAll('.loadline-btn');
-  loadlineBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      loadlineBtns.forEach(b => {
-        b.classList.remove('active');
-        b.style.background = 'transparent';
-        b.style.color = 'var(--text-dim)';
-      });
-      btn.classList.add('active');
-      
-      const stage = parseInt(btn.dataset.stage);
-      activeLoadlineStage = stage;
-
-      if (stage === 1) {
-        btn.style.background = 'var(--accent-pink)';
-        btn.style.color = '#fff';
-      } else {
-        btn.style.background = 'var(--accent-cyan)';
-        btn.style.color = '#060813';
-      }
-
-      // Forzar re-dibujado de recta de carga
-      drawLoadLine();
-    });
-  });
 }
 
 function setNumStages(stages) {
   numStages = stages;
-  
+  const graphsWrapper = document.querySelector('.dashboard-graphs');
+  const graphsCol2 = document.getElementById('graphs-col-2');
+
   if (stages === 1) {
     if (stageTabsWrapper) stageTabsWrapper.style.display = 'none';
     if (controlsStage2) controlsStage2.style.display = 'none';
@@ -1461,20 +1437,29 @@ function setNumStages(stages) {
     if (ctrlCc) ctrlCc.style.display = 'none';
     if (schematicStage2) schematicStage2.style.display = 'none';
     if (schematicConnector) schematicConnector.style.display = 'none';
-    if (cardOscilloscope2) cardOscilloscope2.style.display = 'none';
-    if (loadlineSelectWrapper) loadlineSelectWrapper.style.display = 'none';
+    
+    // Ocultar columna 2 de gráficos y ajustar layout
+    if (graphsCol2) graphsCol2.style.display = 'none';
+    if (graphsWrapper) {
+      graphsWrapper.classList.remove('two-stages');
+      graphsWrapper.classList.add('one-stage');
+    }
     
     schematicTitle.textContent = `Esquema: ${activeConfig1 === 'CE' ? 'Emisor Común (CE)' : activeConfig1 === 'CC' ? 'Colector Común (CC)' : 'Base Común (CB)'}`;
     
     activeStageTab = 1;
-    activeLoadlineStage = 1;
   } else {
     if (stageTabsWrapper) stageTabsWrapper.style.display = 'flex';
     if (ctrlCc) ctrlCc.style.display = 'block';
     if (schematicStage2) schematicStage2.style.display = 'block';
     if (schematicConnector) schematicConnector.style.display = 'flex';
-    if (cardOscilloscope2) cardOscilloscope2.style.display = 'block';
-    if (loadlineSelectWrapper) loadlineSelectWrapper.style.display = 'flex';
+    
+    // Mostrar columna 2 de gráficos y ajustar layout
+    if (graphsCol2) graphsCol2.style.display = 'flex';
+    if (graphsWrapper) {
+      graphsWrapper.classList.remove('one-stage');
+      graphsWrapper.classList.add('two-stages');
+    }
     
     if (activeStageTab === 1) {
       if (controlsStage1) controlsStage1.style.display = 'block';
