@@ -220,7 +220,7 @@
     </section>
 
     <!-- PANEL CENTRAL (Esquema Interactivo y Métricas) -->
-    <div class="dashboard-content" style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1; overflow: hidden;">
+    <div class="dashboard-content" style="display: flex; flex-direction: column; gap: 1rem; flex: 1; overflow: hidden;">
       
       <!-- Esquema SVG -->
       <section class="panel schematic-card" aria-label="Esquema Eléctrico">
@@ -230,7 +230,7 @@
         <div class="schematic-container" style="display: flex; overflow: hidden; padding: 10px;">
           <div class="schematic-wrapper" style="display: flex; width: 100%; align-items: center; justify-content: center; position: relative;">
           <!-- ETAPA 1 CONTAINER -->
-          <div class="schematic-stage" id="schematic-stage-1" style="flex: 1; position: relative;">
+          <div class="schematic-stage" id="schematic-stage-1" style="position: relative;">
             <!-- ===== SVG EMISOR COMÚN (CE) ===== -->
           <svg id="svg-ce" class="interactive-schematic active" viewBox="0 0 440 320" xmlns="http://www.w3.org/2000/svg">
             
@@ -601,15 +601,15 @@
           </div>
           
           <!-- ACOPLAMIENTO INTERETAPA (Conexión Directa) -->
-          <div id="schematic-interstage-connector" style="display: none; align-items: center; justify-content: center; width: 45px; height: 100%; position: relative; z-index: 10; padding: 0 5px;">
+          <div id="schematic-interstage-connector" style="display: none; align-items: center; justify-content: center; position: relative; z-index: 10;">
             <svg viewBox="0 0 45 320" width="45" height="100%" style="overflow: visible; height: 180px;">
               <!-- Hilo de conexión interetapa directo -->
-              <line x1="0" y1="160" x2="45" y2="160" stroke="var(--text-dim)" stroke-width="2.5" id="interstage-wire" />
+              <line x1="-50" y1="160" x2="75" y2="160" stroke="var(--text-dim)" stroke-width="2.5" id="interstage-wire" />
             </svg>
           </div>
           
           <!-- ETAPA 2 CONTAINER -->
-          <div class="schematic-stage" id="schematic-stage-2" style="display: none; flex: 1; position: relative;">
+          <div class="schematic-stage" id="schematic-stage-2" style="display: none; position: relative;">
             <!-- ===== SVG EMISOR COMÚN (CE) ===== -->
           <svg id="svg-ce-2" class="interactive-schematic" viewBox="0 0 440 320" xmlns="http://www.w3.org/2000/svg">
             

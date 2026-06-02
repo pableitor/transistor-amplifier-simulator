@@ -413,6 +413,22 @@ main {
   position: relative;
 }
 
+.schematic-stage {
+  width: 247.5px;
+  max-width: 247.5px;
+  flex: 0 0 247.5px;
+  height: 180px;
+  position: relative;
+}
+
+#schematic-interstage-connector {
+  width: 25.3px;
+  max-width: 25.3px;
+  flex: 0 0 25.3px;
+  height: 180px;
+  position: relative;
+}
+
 /* SVG interactivo animado */
 svg.interactive-schematic {
   display: none;
