@@ -1225,6 +1225,15 @@ function updateSvgVisibility() {
       svg.classList.remove('active');
     }
   });
+
+  // Actualizar cable interetapa para unir los terminales OUT (etapa 1) e IN (etapa 2) sin desfase vertical
+  const interstageWire = document.getElementById('interstage-wire');
+  if (interstageWire) {
+    const y1 = (activeConfig1 === 'CE' || activeConfig1 === 'CB') ? 120 : 200;
+    const y2 = (activeConfig2 === 'CE' || activeConfig2 === 'CC') ? 160 : 200;
+    interstageWire.setAttribute('y1', y1);
+    interstageWire.setAttribute('y2', y2);
+  }
 }
 
 function updateControlStates() {
