@@ -1,136 +1,114 @@
 # BJT Amplifier Playground ⚡
 
-Un simulador web interactivo de alto rendimiento en tiempo real para amplificadores de transistores bipolares NPN ($Q_1$), diseñado bajo una estética premium *Cyberpunk-Dark / Glassmorphism*. La aplicación permite conmutar instantáneamente entre tres configuraciones clásicas de amplificación BJT, modelando con rigor físico sus respuestas en corriente continua (DC), alterna (AC), ancho de banda y distorsión por recorte (clipping).
+Un simulador web interactivo de alto rendimiento en tiempo real para amplificadores de transistores bipolares NPN ($Q_1$, $Q_2$), diseñado bajo una estética premium *Cyberpunk-Dark / Glassmorphism*. La aplicación permite simular sistemas amplificadores de **1 o 2 etapas en cascada**, posibilitando la selección independiente de la topología (CE, CC, CB) y la configuración de componentes para cada etapa en tiempo real. 
+
+El simulador modela con rigor físico y en tiempo real el acoplamiento de señales por condensador, los efectos de carga entre etapas, la respuesta en frecuencia completa y el clipping acumulado en cascada.
 
 ---
 
 ## 🚀 Características Clave
-* **Multitopología Unificada**: Conmutación inmediata entre las tres configuraciones de amplificadores BJT:
+* **Estructura Modular Cascaded**: Alterna dinámicamente entre 1 o 2 etapas con un solo clic en el encabezado.
+* **Topologías Independientes por Etapa**: Configura de forma independiente cada etapa en cualquiera de las tres configuraciones BJT clásicas:
   1. **Emisor Común (CE)**: Alta ganancia de tensión e inversión de fase (180°).
-  2. **Colector Común / Seguidor de Emisor (CC)**: Ganancia unitaria en fase, altísima impedancia de entrada y baja de salida (búfer de corriente).
-  3. **Base Común (CB)**: Alta ganancia de tensión en fase y bajísima impedancia de entrada (excelente para acoplo de RF).
-* **Esquemas SVG Interactivos**: Dibujos vectoriales que siguen la norma ISO. Al mover los sliders o pasar el cursor por los controles de parámetros, los componentes correspondientes se iluminan dinámicamente.
-* **Doble Osciloscopio con Canvas**: Muestra la señal senoidal de entrada y la de salida superpuestas, permitiendo apreciar el desfase y el efecto físico del clipping a medida que se aumenta la amplitud de entrada. Incluye un dial de zoom de escala visual para el canal de salida.
-* **Recta de Carga DC Dinámica**: Representación de la recta de carga con el punto de operación $Q$ estático y una elipse dinámica que simula el balanceo real de la señal de audio en CA.
-* **Respuesta en Frecuencia Completa**: Calcula y visualiza el ancho de banda del amplificador modelando los polos de baja frecuencia por condensadores y de alta frecuencia por el efecto Miller dinámico y junturas internas.
-* **Preajustes Rápidos Adaptativos**: Presets para Audio Hi-Fi, Ganancia Máxima, Baja Distorsión y Saturación (Fuzz) adaptados a cada topología.
+  2. **Colector Común / Seguidor de Emisor (CC)**: Ganancia de voltaje unitaria en fase, alta impedancia de entrada y baja de salida.
+  3. **Base Común (CB)**: Alta ganancia de tensión en fase y baja impedancia de entrada.
+* **Acoplamiento AC Dinámico y Efecto de Carga**: En el modo de 2 etapas, la impedancia de entrada de la segunda etapa ($Z_{in,2}$) actúa como la carga física de corriente alterna de la primera etapa ($r_{load,1} = Rc_1 \parallel Z_{in,2}$ en CE/CB o $Re_1 \parallel Z_{in,2}$ en CC). Alterar cualquier parámetro de la etapa 2 altera de inmediato la ganancia y respuesta de la etapa 1.
+* **Esquemas SVG Interactivos**: Dibujos vectoriales conformes a la Norma ISO que muestran el circuito en tiempo real. Al mover los sliders o pasar el cursor por los controles de parámetros, los componentes correspondientes se iluminan dinámicamente. Al activar 2 etapas, se muestran los esquemas de ambas etapas interconectados por un condensador de acoplamiento de CA ($C_c$).
+* **Doble Osciloscopio con Canvas**:
+  * **Osciloscopio 1 (Etapa 1)**: Muestra la señal de entrada $V_{in}$ superpuesta a la salida de la primera etapa $V_{out,1}$.
+  * **Osciloscopio 2 (Respuesta Global)**: Muestra la señal de entrada $V_{in}$ frente a la salida final amplificada del sistema completo $V_{out,2}$.
+  * Cada osciloscopio incluye controles independientes de zoom o escala visual.
+* **Recta de Carga DC Dinámica**: Conmutación interactiva entre la visualización del punto de operación $Q_1$ de la etapa 1 y $Q_2$ de la etapa 2, incluyendo su recta de corriente estática y la elipse dinámica que ilustra el balanceo de la señal.
+* **Respuesta en Frecuencia Completa**: Calcula el rango de frecuencias considerando la atenuación de entrada por la impedancia de base, el polo del condensador de acoplo de entrada $C_1$, de salida $C_2$, de acople interetapa $C_c$, de bypass $C_{e1}/C_{e2}$, y la atenuación en alta frecuencia debida al Efecto Miller.
 
 ---
 
-## 📐 Modelo Matemático del Simulador
-
-El motor matemático de simulación está estructurado de acuerdo con las siguientes ecuaciones de la ingeniería electrónica analógica, mapeadas estrictamente a los componentes de la aplicación:
+## 📐 Modelo Matemático de Acoplamiento Multietapa
 
 ### 1. Polarización y Punto Q en Corriente Continua (DC)
-La base de $Q_1$ se polariza mediante un divisor de tensión formado por $R_1$ y $R_2$. El punto de operación en reposo (punto Q) se calcula mediante:
+Dado que las etapas están acopladas a través de condensadores, sus circuitos de polarización continua están completamente aislados:
+* **Etapa 1**: Se calculan $Ib_1, Ic_1, Ve_1, Vc_1, Vce_1$ usando sus propios resistores ($R_{1,1}, R_{2,1}, Rc_1, Re_1$) y $\beta_1$.
+* **Etapa 2**: Se calculan $Ib_2, Ic_2, Ve_2, Vc_2, Vce_2$ usando sus propios resistores ($R_{1,2}, R_{2,2}, Rc_2, Re_2$) y $\beta_2$.
 
-* **Tensión de Thévenin en la base ($V_{th}$):**
-  $$V_{th} = V_{cc} \cdot \frac{R_2}{R_1 + R_2}$$
-* **Resistencia de Thévenin en la base ($R_{th}$):**
-  $$R_{th} = R_1 \parallel R_2 = \frac{R_1 \cdot R_2}{R_1 + R_2}$$
-* **Corriente de base en reposo ($Ib$):**
-  $$Ib = \frac{V_{th} - V_{BE}}{R_{th} + (\beta + 1) \cdot Re} \quad (\text{Si } V_{th} > V_{BE} = 0.7\text{ V})$$
-* **Corrientes de colector ($Ic$) y emisor ($Ie$) en reposo:**
-  $$Ic = \beta \cdot Ib, \quad Ie = (\beta + 1) \cdot Ib$$
-* **Voltaje de emisor en reposo ($Ve$):**
-  $$Ve = Ie \cdot Re$$
-* **Voltaje de colector en reposo ($Vc$):**
-  * *CE y CB*: $Vc = V_{cc} - Ic \cdot Rc$
-  * *CC*: $Vc = V_{cc}$
-* **Voltaje colector-emisor en reposo ($Vce$):**
-  $$Vce = Vc - Ve$$
-
-#### Detección de Saturación ($Vce < V_{CE,sat} = 0.2\text{ V}$)
-Si el punto Q calculado cae en saturación, las corrientes y voltajes se recalculan:
-* *CE y CB*: $Ic = Ie = \frac{V_{cc} - 0.2}{Rc + Re}; \quad Vc = (Ie \cdot Re) + 0.2$
-* *CC*: $Ie = \frac{V_{cc} - 0.2}{Re}; \quad Ve = V_{cc} - 0.2$
+Las ecuaciones de base para cada etapa $i$ (siendo $i \in \{1, 2\}$) son:
+* **Tensión de Thévenin ($V_{th,i}$):** $V_{th,i} = V_{cc} \cdot \frac{R_{2,i}}{R_{1,i} + R_{2,i}}$
+* **Resistencia de Thévenin ($R_{th,i}$):** $R_{th,i} = R_{1,i} \parallel R_{2,i}$
+* **Corriente de base ($Ib_i$):** $Ib_i = \frac{V_{th,i} - V_{BE}}{R_{th,i} + (\beta_i + 1) \cdot Re_i} \quad (\text{Si } V_{th,i} > 0.7\text{ V})$
+* **Corriente de colector ($Ic_i$):** $Ic_i = \beta_i \cdot Ib_i$
+* **Detección de Saturación**: Si $Vce_i < 0.2\text{ V}$, se recalcula la etapa bajo las condiciones de saturación correspondientes a su topología.
 
 ---
 
-### 2. Análisis Dinámico en Corriente Alterna (AC) de Pequeña Señal
-En la zona activa, se define la **resistencia dinámica intrínseca del emisor ($re$)** en base al voltaje térmico ($V_T = 25\text{ mV}$):
-$$re = \frac{V_T}{Ic}$$
+### 2. Análisis Dinámico en Corriente Alterna (AC)
 
-#### A. Emisor Común (CE)
-* **Resistencia de colector de CA ($rc_{ac}$):** $rc_{ac} = Rc \parallel Rl$
-* **Impedancia de entrada ($Z_{in}$):**
-  * *Con condensador de bypass ($Ce$ activo)*: $Z_{in} = R_{th} \parallel (\beta \cdot re)$
-  * *Sin condensador de bypass ($Ce$ inactivo)*: $Z_{in} = R_{th} \parallel [\beta \cdot (re + Re)]$
-* **Ganancia de Tensión de Banda Media ($Av_{mid}$):**
-  * *Con bypass ($Ce$)*: $Av_{mid} = -\frac{rc_{ac}}{re}$ *(Desfase de 180°)*
-  * *Sin bypass ($Ce$)*: $Av_{mid} = -\frac{rc_{ac}}{re + Re}$ *(Desfase de 180°)*
+#### A. Parámetros de la Etapa 2 (Cargada por $Rl$)
+* **Impedancia de Entrada ($Z_{in,2}$):**
+  * *CE con bypass ($Ce_2$)*: $Z_{in,2} = R_{th2} \parallel (\beta_2 \cdot re_2)$
+  * *CE sin bypass ($Ce_2$)*: $Z_{in,2} = R_{th2} \parallel [\beta_2 \cdot (re_2 + Re_2)]$
+  * *CC*: $Z_{in,2} = R_{th2} \parallel [\beta_2 \cdot (re_2 + Re_2 \parallel Rl)]$
+  * *CB*: $Z_{in,2} = Re_2 \parallel re_2$
+* **Ganancia de Tensión ($Av_{2,mid}$):**
+  * *CE con bypass*: $Av_{2,mid} = -\frac{Rc_2 \parallel Rl}{re_2}$
+  * *CE sin bypass*: $Av_{2,mid} = -\frac{Rc_2 \parallel Rl}{re_2 + Re_2}$
+  * *CC*: $Av_{2,mid} = \frac{Re_2 \parallel Rl}{re_2 + Re_2 \parallel Rl}$
+  * *CB*: $Av_{2,mid} = \frac{Rc_2 \parallel Rl}{re_2}$
+  *(donde $re_2 = 25\text{ mV} / Ic_2$)*
 
-#### B. Colector Común (CC)
-* **Resistencia de emisor de CA ($re_{ac}$):** $re_{ac} = Re \parallel Rl$
-* **Impedancia de entrada ($Z_{in}$):** $Z_{in} = R_{th} \parallel [\beta \cdot (re + re_{ac})]$ *(Muy elevada, $>100\text{ k}\Omega$)*
-* **Ganancia de Tensión de Banda Media ($Av_{mid}$):** $Av_{mid} = \frac{re_{ac}}{re + re_{ac}}$ *(En fase, ganancia positiva slightly < 1)*
+#### B. Parámetros de la Etapa 1 (Cargada por $Z_{in,2}$ en modo de 2 etapas)
+La resistencia de carga de CA de la etapa 1 se determina como:
+* $R_{load,1} = Z_{in,2}$ *(si numStages = 2)*
+* $R_{load,1} = Rl$ *(si numStages = 1)*
 
-#### C. Base Común (CB)
-* **Resistencia de colector de CA ($rc_{ac}$):** $rc_{ac} = Rc \parallel Rl$
-* **Impedancia de entrada ($Z_{in}$):** $Z_{in} = Re \parallel re$ *(Sumamente baja, $5\ \Omega$ a $50\ \Omega$)*
-* **Ganancia de Tensión de Banda Media ($Av_{mid}$):** $Av_{mid} = \frac{rc_{ac}}{re}$ *(Alta ganancia en fase)*
+Esto modifica dinámicamente su resistencia equivalente de carga de colector/emisor en AC:
+* **Ganancia de Tensión de la Etapa 1 ($Av_{1,mid}$):**
+  * *CE con bypass ($Ce_1$)*: $Av_{1,mid} = -\frac{Rc_1 \parallel R_{load,1}}{re_1}$
+  * *CE sin bypass ($Ce_1$)*: $Av_{1,mid} = -\frac{Rc_1 \parallel R_{load,1}}{re_1 + Re_1}$
+  * *CC*: $Av_{1,mid} = \frac{Re_1 \parallel R_{load,1}}{re_1 + Re_1 \parallel R_{load,1}}$
+  * *CB*: $Av_{1,mid} = \frac{Rc_1 \parallel R_{load,1}}{re_1}$
+
+#### C. Ganancia de Tensión Global ($Av_{total,mid}$)
+Tomando en cuenta el divisor de tensión que se forma con la resistencia del generador $R_g = 600\  \Omega$:
+* **1 Etapa**: $Av_{total,mid} = \frac{Z_{in,1}}{Rg + Z_{in,1}} \cdot Av_{1,mid}$
+* **2 Etapas**: $Av_{total,mid} = \frac{Z_{in,1}}{Rg + Z_{in,1}} \cdot Av_{1,mid} \cdot Av_{2,mid}$
 
 ---
 
 ### 3. Respuesta en Frecuencia y Modelado de Polos
-* **Polos de baja frecuencia ($f_L$) - Filtro Pasa Altos:**
-  $$f_{L1} = \frac{1}{2\pi C_1(R_g + Z_{in})} \quad (\text{Polo de Entrada con } R_g=600\ \Omega)$$
-  $$f_{L2} = \frac{1}{2\pi C_2(R_{out,AC} + Rl)} \quad (\text{Polo de Salida con } R_{out,AC}=Rc \text{ en CE/CB y } R_{eq,e} \text{ en CC})$$
-  $$f_{Le} = \frac{1}{2\pi C_x R_{eq,x}} \quad (\text{Polo de bypass: } C_x=Ce, R_{eq,e} \text{ para CE; } C_x=Cb, \frac{R_{th}}{\beta+1} \text{ para CB})$$
-  $$f_L = \sqrt{f_{L1}^2 + f_{L2}^2 + f_{Le}^2}$$
-* **Polos de alta frecuencia ($f_H$) - Filtro Pasa Bajos:**
-  Calculado con las capacitancias de juntura $C_{be} = 25\text{ pF}$ y $C_{bc} = 5\text{ pF}$:
-  * *CE y CC (Efecto Miller)*: $C_M = C_{bc}(1 + |Av_{mid}|); \quad C_{in,H} = C_{be} + C_M; \quad f_H = \frac{1}{2\pi (R_g \parallel R_{th}) C_{in,H}}$
-  * *CB (Sin Miller)*: $C_{in,H} = C_{be}; \quad f_H = \frac{1}{2\pi (R_g \parallel Z_{in}) C_{in,H}}$ *(Ancho de banda muy alto)*
+* **Polos de baja frecuencia ($f_L$):**
+  $$f_{L1} = \frac{1}{2\pi C_1(R_g + Z_{in,1})} \quad (\text{Polo de Entrada})$$
+  $$f_{L2} = \frac{1}{2\pi C_2(R_{out,2} + Rl)} \quad (\text{Polo de Salida})$$
+  $$f_{L,c} = \frac{1}{2\pi C_c(R_{out,1} + Z_{in,2})} \quad (\text{Polo de Acoplamiento Interetapa})$$
+  $$f_{Le1}, f_{Le2} \quad (\text{Polos de bypass para cada etapa})$$
+  $$f_L = \sqrt{f_{L1}^2 + f_{Le1}^2 + f_{L,c}^2 + f_{L2}^2 + f_{Le2}^2}$$
+* **Polos de alta frecuencia ($f_H$):**
+  Calculados usando las capacitancias internas del BJT y el producto Ganancia-Ancho de Banda. La frecuencia $f_H$ total del sistema se calcula mediante la aproximación de cascada:
+  $$f_H = \frac{1}{\sqrt{1/f_{H1}^2 + 1/f_{H2}^2}}$$
 
 ---
 
-### 4. Límites Físicos de Recorte (Clipping)
-La distorsión ocurre cuando la oscilación dinámica de salida excede los límites físicos del transistor alimentado por $V_{cc}$:
-* **CE**: El voltaje de colector instantáneo $v_c(t)$ está limitado por: $Ve + 0.2\text{ V} \le v_c(t) \le V_{cc}$
-* **CC**: El voltaje de emisor instantáneo $v_e(t)$ está acotado por: $0\text{ V} \le v_e(t) \le V_{cc} - 0.2\text{ V}$
-* **CB**: El voltaje de colector instantáneo $v_c(t)$ está limitado por: $Ve + 0.7\text{ V} \le v_c(t) \le V_{cc}$
-
----
-
-## 📁 Estructura del Proyecto
-```
-transistor-amplifier-simulator/
-├── index.html        # Estructura HTML con SVGs incrustados de los 3 circuitos y controles de sliders
-├── style.css         # Hojas de estilo premium con temática ciberpunk y adaptabilidad responsiva
-├── app.js            # Motor matemático, lógica del osciloscopio y renderizado de gráficos Canvas
-└── README.md         # Documentación general y manual de usuario
-```
+### 4. Límites de Recorte (Clipping)
+La distorsión ocurre cuando la oscilación de corriente alterna supera los límites de corriente continua de la etapa correspondiente:
+* **Etapa 1**: La onda de salida se recorta de forma no lineal según sus propios límites de alimentación $V_{cc}$ e $Ve_1 + 0.2\text{ V}$.
+* **Etapa 2**: Recibe la señal ya distorsionada/recortada de la primera etapa y le aplica su propia amplificación y límites de recorte. Esto ilustra con rigor el comportamiento de un preamplificador saturando a una etapa de potencia.
 
 ---
 
 ## 💻 Ejecución del Simulador
-La aplicación está desarrollada con tecnologías web estándar puras sin dependencias externas pesadas ni bases de datos.
 
-### Método Rápido (Doble clic)
-1. Descarga el repositorio o clónalo:
-   ```bash
-   git clone https://github.com/pableitor/transistor-amplifier-simulator.git
-   ```
-2. Abre la carpeta y haz doble clic sobre el archivo `index.html` para ejecutarlo inmediatamente en tu navegador.
+La aplicación está desarrollada con tecnologías web estándar puras, sin dependencias externas pesadas ni compilación.
 
-### Método Servidor Local
-Para iniciarlo en un servidor local ligero:
-* Usando **Python**:
-  ```bash
-  python -m http.server 8000
-  ```
-* Usando **Node.js**:
-  ```bash
-  npx http-server ./
-  ```
-Luego, accede a `http://localhost:8000` en tu navegador.
+1. Abre la carpeta del proyecto y haz doble clic sobre el archivo [index.html](file:///C:/Users/ptorr/OneDrive/Documentos/JAVASCRIPT/transistor-amplifier-simulator/index.html) para abrirlo directamente en tu navegador.
+2. Si prefieres iniciarlo en un servidor local ligero:
+   * Con **Python**: `python -m http.server 8000`
+   * Con **Node.js**: `npx http-server ./`
+   Luego, accede a `http://localhost:8000` en tu navegador.
 
 ---
 
-## 🧪 Pruebas Recomendadas
+## 🧪 Escenarios de Prueba Recomendados
 
-1. **Audio Hi-Fi (CE)**: Activa el preset "Audio Hi-Fi" en la pestaña de Emisor Común. Con $V_{in} = 40\text{ mV}$ obtendrás una señal senoidal amplificada y limpia en oposición de fase (180°). El ancho de banda en reposo mostrará rangos de audio de alta fidelidad: `22Hz - 331kHz`.
-2. **Efecto de Carga y Fase en Búfer (CC)**: Activa Colector Común. Observa que el voltaje de salida es casi idéntico al de entrada y está perfectamente en fase (0°). Mueve el control deslizante **Escala Salida (Vout)** a `20x` para igualar el multiplicador visual de entrada y notar la superposición de ambas señales sin perder resolución.
-3. **Respuesta en Frecuencia de RF (CB)**: Cambia a Base Común. Mueve la frecuencia de entrada por encima de `100 kHz`. Mientras que en la topología CE la salida se atenúa por el efecto Miller, la topología CB mantiene la amplificación por su alta frecuencia de corte superior ($f_H > 2\text{ MHz}$).
-4. **Saturación y Fuzz**: En configuración CE, sube la amplitud de entrada a `200 mV`. Verás que la onda de salida fucsia se aplana arriba (corte) y abajo (saturación), activando el parpadeo de alerta **"Onda Recortada (Clipping)"** en amarillo neón.
+1. **Efecto de Carga Directo**: Conecta 2 Etapas. Configura la etapa 1 en `CE` y la etapa 2 en `CE`. En la pestaña de la Etapa 2, reduce drásticamente las resistencias divisorias de base $R_1$ y $R_2$ a valores muy bajos. Observará en el multímetro digital cómo la impedancia de entrada $Z_{in}$ de la etapa 2 desciende, cargando a la etapa 1 y provocando que la amplitud en el osciloscopio 1 disminuya severamente en tiempo real.
+2. **Desfase en Cascada**:
+   * Configura **`CE` + `CE`**: Ambas etapas invierten la fase de la señal. Al observar las trazas de entrada (azul) y salida final (fucsia) en el osciloscopio 2, verá que vuelven a estar perfectamente en fase (desfase acumulado de 360° o 0°).
+   * Configura **`CE` + `CC`**: La salida final en el osciloscopio 2 estará invertida (desfase acumulado de 180°).
+3. **Clipping en Cascada**: Configura 2 etapas. Aumenta la amplitud de entrada a $120\text{ mV}$. Observa cómo el osciloscopio 1 comienza a mostrar la parte inferior de la onda achatada (recorte de la primera etapa). En el segundo osciloscopio, la onda final fucsia presentará una deformidad combinada, reflejando el recorte acumulado.
