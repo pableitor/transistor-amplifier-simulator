@@ -1,0 +1,25 @@
+# Tareas: Simulador Multitopología BJT (CE, CC, CB)
+
+- [x] Modificar la Estructura HTML (`index.html`)
+  - [x] Añadir barra de pestañas fluorescentes en el header para seleccionar CE, CC y CB
+  - [x] Integrar el segundo esquema SVG interactivo para Colector Común (CC)
+  - [x] Integrar el tercer esquema SVG interactivo para Base Común (CB)
+  - [x] Adaptar etiquetas de sliders y elementos semánticos para el soporte de las tres topologías
+- [x] Desarrollar los Estilos CSS en `style.css`
+  - [x] Diseñar las pestañas ciberpunk del selector de configuración
+  - [x] Implementar la conmutación de esquemas (ocultar/mostrar mediante clases `.active`)
+  - [x] Estilizar la retroalimentación visual de controles "desactivados" (opacidad reducida para sliders no aplicables)
+- [x] Ampliar el Motor Matemático y Lógica en `app.js`
+  - [x] Agregar controlador de cambio de pestaña para coordinar la topología activa
+  - [x] Programar las ecuaciones de polarización DC específicas (Colector conectado a $V_{cc}$ en CC, base polarizada en CB)
+  - [x] Programar los modelos AC de pequeña señal para CC (ganancia en fase ≈ 1, impedancia de entrada altísima) y CB (ganancia en fase alta, impedancia de entrada bajísima)
+  - [x] Adaptar el modelado de respuesta en frecuencia (calcular polos de acople y Miller específicos para cada topología)
+  - [x] Actualizar el mapeo interactivo de los tres esquemas SVG para que los sliders iluminen los componentes correctos de cada circuito
+- [x] Actualizar Visualización de Osciloscopio y Recta de Carga
+  - [x] Adaptar el desfase dinámico en el osciloscopio (180° solo para CE; 0° en fase para CC y CB)
+  - [x] Ajustar el multiplicador de visualización del osciloscopio en Base Común para compensar la baja resistencia de entrada
+  - [x] Asegurar que el punto dinámico AC sobre la recta de carga se balancee correctamente
+- [x] Pruebas y Validación de las Tres Topologías
+  - [x] Verificar que Emisor Común conserve su respuesta Hi-Fi de ganancia invertida
+  - [x] Comprobar que Colector Común muestre ganancia positiva <1 e impedancia >100 kΩ
+  - [x] Comprobar que Base Común responda con impedancia de entrada <50 Ω y ganancia positiva alta
