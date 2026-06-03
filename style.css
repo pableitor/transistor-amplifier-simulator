@@ -732,7 +732,14 @@ footer {
 }
 
 .dashboard-graphs.two-stages {
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  justify-content: center;
+  gap: 25.3px;
+}
+
+.dashboard-graphs.two-stages .graphs-column {
+  width: 247.5px;
+  flex: 0 0 247.5px;
 }
 
 .dashboard-graphs.one-stage {
@@ -762,7 +769,14 @@ footer {
 
 @media (max-width: 900px) {
   .dashboard-graphs.two-stages {
-    grid-template-columns: 1fr; /* Columnas de Etapa 1 y 2 apiladas en pantallas pequeñas */
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .dashboard-graphs.two-stages .graphs-column {
+    width: 100%;
+    max-width: 460px;
+    flex: 1;
   }
   .presets-container {
     display: none;
