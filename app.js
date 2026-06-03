@@ -36,10 +36,10 @@ function getInputs(s) {
     re:   document.getElementById(`${prefix}-re`),
     beta: document.getElementById(`${prefix}-beta`),
     ce:   document.getElementById(`${prefix}-ce`),
-    // freq y vin solo en etapa 1 (la etapa 2 recibe Vin de la etapa 1)
+    c1:   document.getElementById(`${prefix}-c1`),
+    // freq y vin solo en etapa 1
     vin:  s === 0 ? document.getElementById('s1-vin')  : null,
     freq: s === 0 ? document.getElementById('s1-freq') : null,
-    // Rl: en 1 etapa usa s1-rl2, en 2 etapas usa s1-rl (etapa 1) y s2-rl (etapa 2)
     rl:   s === 0 ? document.getElementById('s1-rl2')  : document.getElementById('s2-rl'),
     voutScale: document.getElementById(`${prefix}-vout-scale`),
   };
@@ -54,6 +54,7 @@ function getReadouts(s) {
     rc:   document.getElementById(`${prefix}-val-rc`),
     re:   document.getElementById(`${prefix}-val-re`),
     beta: document.getElementById(`${prefix}-val-beta`),
+    c1:   document.getElementById(`${prefix}-val-c1`),
     vin:  s === 0 ? document.getElementById('s1-val-vin')  : null,
     freq: s === 0 ? document.getElementById('s1-val-freq') : null,
     rl:   s === 0 ? document.getElementById('s1-val-rl2')  : document.getElementById(`${prefix}-val-rl`),
@@ -133,6 +134,7 @@ function simulateStage(stageIdx, vinAC, frequency, zinNext) {
   const Re   = parseFloat(inputs.re.value) * 1000;
   const beta = parseFloat(inputs.beta.value);
   const Ce   = inputs.ce.checked;
+  const C1   = inputs.c1 ? parseFloat(inputs.c1.value) * 1e-6 : 10e-6;
   const Rl   = isFinite(zinNext) ? parallel(parseFloat(inputs.rl.value) * 1000, zinNext)
                                  : parseFloat(inputs.rl.value) * 1000;
   const Vin  = vinAC;
@@ -209,12 +211,13 @@ function simulateStage(stageIdx, vinAC, frequency, zinNext) {
   }
 
   // Respuesta en frecuencia
-  const C1 = 10e-6, C2 = 4.7e-6, Ce_val = 47e-6, Cb_val = 47e-6, Rg = 600;
+  const C1_val = C1;  // valor leído del slider
+  const C2 = 4.7e-6, Ce_val = 47e-6, Cb_val = 47e-6, Rg = 600;
   let fL1, fL2, fLe = 0;
 
   switch (topo) {
     case 'CE':
-      fL1 = 1 / (2 * Math.PI * C1 * (Rg + Zin));
+      fL1 = 1 / (2 * Math.PI * C1_val * (Rg + Zin));
       fL2 = 1 / (2 * Math.PI * C2 * (Rc + Rl));
       if (Ce && state === 'ACTIVA' && re_intrinsic !== Infinity) {
         const Req_e = parallel(Re, re_intrinsic + (parallel(Rth, Rg) / beta));
@@ -222,11 +225,11 @@ function simulateStage(stageIdx, vinAC, frequency, zinNext) {
       }
       break;
     case 'CC':
-      fL1 = 1 / (2 * Math.PI * C1 * (Rg + Zin));
+      fL1 = 1 / (2 * Math.PI * C1_val * (Rg + Zin));
       fL2 = 1 / (2 * Math.PI * C2 * (parallel(Re, re_intrinsic + parallel(Rth, Rg) / beta) + Rl));
       break;
     case 'CB':
-      fL1 = 1 / (2 * Math.PI * C1 * (Rg + Zin));
+      fL1 = 1 / (2 * Math.PI * C1_val * (Rg + Zin));
       fL2 = 1 / (2 * Math.PI * C2 * (Rc + Rl));
       if (state === 'ACTIVA' && re_intrinsic !== Infinity) {
         fLe = 1 / (2 * Math.PI * Cb_val * (parallel(R1, R2) / (beta + 1)));
@@ -322,11 +325,18 @@ function updateReadouts(s) {
   if (ro.re)   ro.re.textContent   = `${inp.re.value} kΩ`;
   if (ro.beta) ro.beta.textContent = `${d.beta}`;
   if (ro.rl)   ro.rl.textContent   = `${inp.rl ? inp.rl.value : '—'} kΩ`;
+  // C1
+  if (ro.c1 && inp.c1) {
+    const c1v = parseFloat(inp.c1.value);
+    ro.c1.textContent = c1v < 1 ? `${(c1v * 1000).toFixed(0)} nF` : `${c1v.toFixed(1)} µF`;
+  }
 
   if (s === 0 && ro.vin) {
     ro.vin.textContent = `${inp.vin.value} mV`;
     const f = d.frequency;
-    ro.freq.textContent = f < 1000 ? `${f.toFixed(0)} Hz` : `${(f/1000).toFixed(2)} kHz`;
+    if (f >= 1e6)       ro.freq.textContent = `${(f/1e6).toFixed(2)} MHz`;
+    else if (f >= 1000) ro.freq.textContent = `${(f/1000).toFixed(2)} kHz`;
+    else                ro.freq.textContent = `${f.toFixed(0)} Hz`;
   }
 
   // DMM
@@ -340,7 +350,16 @@ function updateReadouts(s) {
     } else {
       avDisplay = `+${d.Av.toFixed(d.topo === 'CC' ? 3 : 1)}`;
     }
-    const fHDisplay = d.fH >= 1e6 ? `${(d.fH/1e6).toFixed(1)}MHz` : `${(d.fH/1000).toFixed(0)}kHz`;
+    const fHDisplay = d.fH >= 1e6
+      ? `${(d.fH/1e6).toFixed(2)}MHz`
+      : d.fH >= 1000
+        ? `${(d.fH/1000).toFixed(0)}kHz`
+        : `${d.fH.toFixed(0)}Hz`;
+    const fLDisplay = d.fL < 1
+      ? `${d.fL.toFixed(2)}Hz`
+      : d.fL >= 1000
+        ? `${(d.fL/1000).toFixed(1)}kHz`
+        : `${d.fL.toFixed(1)}Hz`;
 
     // Para la etapa 2, mostrar la ganancia total
     let avLabel = avDisplay;
@@ -351,7 +370,7 @@ function updateReadouts(s) {
 
     ro.av.innerHTML = `${avLabel}<span class="metric-unit">x</span>
       <div style="font-size:0.55rem;color:var(--text-dim);margin-top:2px;font-weight:500;">
-        ${d.fL.toFixed(0)}Hz–${fHDisplay}
+        ${fLDisplay}–${fHDisplay}
       </div>`;
   } else {
     ro.av.innerHTML = `0.0<span class="metric-unit">x</span>`;
@@ -787,7 +806,7 @@ function setupAllControls() {
   });
 
   // Sliders de E1
-  const s1Ids = ['s1-vcc','s1-r1','s1-r2','s1-rc','s1-re','s1-beta','s1-ce','s1-vin','s1-freq','s1-rl','s1-rl2','s1-vout-scale'];
+  const s1Ids = ['s1-vcc','s1-r1','s1-r2','s1-rc','s1-re','s1-beta','s1-ce','s1-vin','s1-freq','s1-rl','s1-rl2','s1-c1','s1-vout-scale'];
   s1Ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => {
@@ -797,7 +816,7 @@ function setupAllControls() {
   });
 
   // Sliders de E2
-  const s2Ids = ['s2-vcc','s2-r1','s2-r2','s2-rc','s2-re','s2-beta','s2-ce','s2-rl','s2-vout-scale'];
+  const s2Ids = ['s2-vcc','s2-r1','s2-r2','s2-rc','s2-re','s2-beta','s2-ce','s2-rl','s2-c1','s2-vout-scale'];
   s2Ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => {
