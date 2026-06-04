@@ -1,0 +1,120 @@
+* =============================================================
+* Amplificador BJT NPN — Configuración Emisor Común (CE)
+* =============================================================
+* Transistor : 2N2222 (modelo completo Ebers-Moll incluido)
+* Vcc        : 12 V
+* Punto Q    : Icq ≈ 2 mA  |  Vceq ≈ 6 V
+* Señal      : Vin = 20 mVpico @ 10 kHz (senoidal)
+* Carga      : Rl = 10 kΩ
+* Bypass Ce  : 47 µF (Ce en paralelo con Re)
+* =============================================================
+* Para comparar con BJT Amplifier Playground:
+*   https://github.com/pableitor/transistor-amplifier-simulator
+* =============================================================
+
+* ---- Fuente de alimentación --------------------------------
+Vcc  VCC  0   DC 12
+
+* ---- Señal de entrada senoidal ----------------------------
+* Sintaxis: SIN(offset_DC amplitud frecuencia) [AC amplitud_AC]
+Vin  IN   0   SIN(0 20m 10k) AC 1
+
+* ---- Red de polarización (divisor de tensión) -------------
+R1   VCC  B   47k     ; R1 superior del divisor
+R2   B    0   10k     ; R2 inferior del divisor
+
+* ---- Condensador de acoplamiento de entrada ---------------
+C1   IN   B   10u     ; Desacopla DC de la fuente / base
+
+* ---- Transistor NPN 2N2222 --------------------------------
+* Q<nombre> <Colector> <Base> <Emisor> <Modelo>
+Q1   C    B    E    2N2222
+
+* ---- Resistencia de colector ------------------------------
+Rc   VCC  C   2.2k
+
+* ---- Resistencia de emisor --------------------------------
+Re   E    0   680
+
+* ---- Condensador de bypass de emisor ---------------------
+Ce   E    0   47u     ; Cortocircuita Re en AC → máxima ganancia
+
+* ---- Condensador de acoplamiento de salida ---------------
+C2   C    OUT  10u    ; Desacopla DC de la carga
+
+* ---- Resistencia de carga ---------------------------------
+Rl   OUT  0   10k
+
+* =============================================================
+* Modelo 2N2222 — parámetros SPICE Ebers-Moll (NIVEL 1)
+* Fuente: Fairchild Semiconductor datasheet + fiteo SPICE
+* =============================================================
+.model 2N2222 NPN(
++ Is    = 1.8108e-14
++ Bf    = 200
++ Br    = 6
++ Rb    = 10
++ Rc    = 1
++ Re    = 0
++ Cje   = 26.08p
++ Vje   = 0.6748
++ Mje   = 0.3557
++ Cjc   = 11.01p
++ Vjc   = 0.75
++ Mjc   = 0.3416
++ Tf    = 0.4117n
++ Tr    = 42n
++ VAf   = 74.03
++ IKf   = 0.2847
++ ISE   = 5.0e-14
++ NE    = 1.998
++ Xtb   = 1.5
++ Eg    = 1.11
++ Xti   = 3
++ FC    = 0.5)
+
+* =============================================================
+* ANÁLISIS
+* =============================================================
+
+* 1) Punto de operación DC (opcional, descomentar para ver en log)
+* .op
+
+* 2) Transitorio: 10 ciclos de 10kHz = 1ms, paso 10ns
+*    → Ver forma de onda en V(OUT) y V(IN)
+* .tran 10n 1m 0 10n
+
+* 3) Respuesta en frecuencia: 10 Hz → 100 MHz (opcional, descomentar para Bode)
+.ac dec 100 10 100Meg
+
+* =============================================================
+* MEDIDAS AUTOMÁTICAS (resultado en el log de LTspice)
+* =============================================================
+
+* Ganancia de tensión a 10 kHz (pico a pico)
+.meas TRAN Vout_pp   PP  V(OUT)  FROM=100u TO=1m
+.meas TRAN Vin_pp    PP  V(IN)   FROM=100u TO=1m
+.meas TRAN Av_medido PARAM  Vout_pp / Vin_pp
+
+* Tensión DC en los nodos principales
+.meas OP Vb_DC    FIND V(B)
+.meas OP Vc_DC    FIND V(C)
+.meas OP Ve_DC    FIND V(E)
+.meas OP Vce_DC   FIND V(C,E)
+.meas OP Ic_mA    FIND Ic(Q1)
+
+.backanno
+.end
+
+* =============================================================
+* VALORES ESPERADOS (referencia para validar)
+* =============================================================
+* Vb  ≈ 2.07 V
+* Ve  ≈ 1.37 V
+* Vc  ≈ 7.60 V
+* Vce ≈ 6.23 V
+* Icq ≈ 2.01 mA
+* Av  ≈ -100 a -130 x  (depende del beta real del 2N2222)
+* fL  ≈ 1–5 Hz   (con Ce=47µF, C1=C2=10µF)
+* fH  ≈ 5–15 MHz (depende de parámetros HF del 2N2222)
+* =============================================================

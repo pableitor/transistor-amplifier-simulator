@@ -590,12 +590,20 @@ function drawOscilloscope(stageIdx) {
   ctx.save(); ctx.shadowBlur = 5; ctx.shadowColor = '#ff007f';
   ctx.beginPath();
 
-  const phaseRad = d.phaseShiftDeg * Math.PI / 180;
+  let totalAv = d.Av;
+  let totalPhaseRad = d.phaseShiftDeg * Math.PI / 180;
+  const Vin0 = parseFloat(getInputs(0).vin.value) / 1000;
+
+  if (stageIdx === 1 && simData[0]) {
+    totalAv = simData[0].Av * d.Av;
+    totalPhaseRad = (simData[0].phaseShiftDeg + d.phaseShiftDeg) * Math.PI / 180;
+  }
+
   const visualScale = inp.voutScale ? parseFloat(inp.voutScale.value) : 1;
 
   for (let x = 0; x < points; x++) {
     const angle = 2 * Math.PI * freqHz * (x / points) - (animationTime * 2 * Math.PI);
-    const vOutIdeal = d.Av * d.Vin * Math.sin(angle + phaseRad);
+    const vOutIdeal = totalAv * Vin0 * Math.sin(angle + totalPhaseRad);
     let vOutRealAc;
 
     if (d.topo === 'CC') {
@@ -832,6 +840,11 @@ function setupAllControls() {
 document.addEventListener('DOMContentLoaded', () => {
   setupAllControls();
 
+  const btnExport = document.getElementById('btn-export-spice');
+  if (btnExport) {
+    btnExport.addEventListener('click', downloadSpiceFile);
+  }
+
   // Estado inicial
   switchTopology(0, 'CE');
   switchTopology(1, 'CE');
@@ -841,3 +854,108 @@ document.addEventListener('DOMContentLoaded', () => {
   // Iniciar animación
   animationLoop();
 });
+
+// ==========================================================================
+// Exportación a SPICE (.cir)
+// ==========================================================================
+function generateSpiceNetlist() {
+  let cir = "* =============================================================\n";
+  cir += "* BJT Amplifier Playground - SPICE Netlist Export\n";
+  cir += `* Etapas: ${numStages} | Topologias: ${activeTopology[0]}` + (numStages === 2 ? ` + ${activeTopology[1]}` : "") + "\n";
+  cir += "* =============================================================\n\n";
+
+  const i1 = getInputs(0);
+  const vcc = parseFloat(i1.vcc.value);
+  const vin = parseFloat(i1.vin.value) / 1000;
+  const freq = Math.pow(10, parseFloat(i1.freq.value));
+  const c1 = parseFloat(i1.c1.value) + "u";
+
+  cir += "* ---- Fuente de alimentacion --------------------------------\n";
+  cir += `Vcc  VCC  0   DC ${vcc}\n\n`;
+
+  cir += "* ---- Senal de entrada senoidal ----------------------------\n";
+  cir += `Vin  IN   0   SIN(0 ${vin} ${freq}) AC 1\n\n`;
+
+  cir += "* ---- Condensador de entrada -------------------------------\n";
+  
+  // Nodos para E1
+  const topo1 = activeTopology[0];
+  let e1_in = topo1 === 'CB' ? 'E1' : 'B1';
+  cir += `C1_1 IN   ${e1_in}   ${c1}\n\n`;
+
+  cir += "* ---- Etapa 1 (" + topo1 + ") ----------------------------------------\n";
+  cir += `R1_1 VCC  B1   ${parseFloat(i1.r1.value)}k\n`;
+  cir += `R2_1 B1   0    ${parseFloat(i1.r2.value)}k\n`;
+  if (topo1 !== 'CC') cir += `Rc_1 VCC  C1   ${parseFloat(i1.rc.value)}k\n`;
+  else cir += `Rc_1 VCC  C1   0.001  ; puente ideal para CC\n`;
+  cir += `Re_1 E1   0    ${parseFloat(i1.re.value)}k\n`;
+  
+  if (topo1 === 'CE' && i1.ce.checked) {
+    cir += `Ce_1 E1   0    47u\n`;
+  } else if (topo1 === 'CB') {
+    cir += `Cb_1 B1   0    47u\n`;
+  }
+
+  cir += `Q1   C1   B1   E1   2N2222\n\n`;
+
+  let last_out_node = topo1 === 'CC' ? 'E1' : 'C1';
+
+  if (numStages === 2) {
+    const i2 = getInputs(1);
+    const topo2 = activeTopology[1];
+    let e2_in = topo2 === 'CB' ? 'E2' : 'B2';
+    const c1_2 = parseFloat(i2.c1.value) + "u";
+
+    cir += "* ---- Acoplo interetapa ------------------------------------\n";
+    cir += `C1_2 ${last_out_node}   ${e2_in}   ${c1_2}\n\n`;
+
+    cir += "* ---- Etapa 2 (" + topo2 + ") ----------------------------------------\n";
+    cir += `R1_2 VCC  B2   ${parseFloat(i2.r1.value)}k\n`;
+    cir += `R2_2 B2   0    ${parseFloat(i2.r2.value)}k\n`;
+    if (topo2 !== 'CC') cir += `Rc_2 VCC  C2   ${parseFloat(i2.rc.value)}k\n`;
+    else cir += `Rc_2 VCC  C2   0.001  ; puente ideal para CC\n`;
+    cir += `Re_2 E2   0    ${parseFloat(i2.re.value)}k\n`;
+
+    if (topo2 === 'CE' && i2.ce.checked) {
+      cir += `Ce_2 E2   0    47u\n`;
+    } else if (topo2 === 'CB') {
+      cir += `Cb_2 B2   0    47u\n`;
+    }
+    cir += `Q2   C2   B2   E2   2N2222\n\n`;
+
+    last_out_node = topo2 === 'CC' ? 'E2' : 'C2';
+  }
+
+  const finalRl = numStages === 2 ? parseFloat(getInputs(1).rl.value) : parseFloat(getInputs(0).rl.value);
+
+  cir += "* ---- Salida y Carga ---------------------------------------\n";
+  cir += `C2_OUT ${last_out_node}  OUT  10u\n`;
+  cir += `Rl   OUT  0   ${finalRl}k\n\n`;
+
+  cir += "* =============================================================\n";
+  cir += "* Modelo 2N2222\n";
+  cir += "* =============================================================\n";
+  cir += ".model 2N2222 NPN(Is=1.8108e-14 Bf=200 Br=6 Rb=10 Rc=1 Re=0 Cje=26.08p Vje=0.6748 Mje=0.3557 Cjc=11.01p Vjc=0.75 Mjc=0.3416 Tf=0.4117n Tr=42n VAf=74.03 IKf=0.2847 ISE=5.0e-14 NE=1.998 Xtb=1.5 Eg=1.11 Xti=3 FC=0.5)\n\n";
+
+  cir += "* =============================================================\n";
+  cir += "* ANALISIS\n";
+  cir += "* =============================================================\n";
+  cir += ".op\n";
+  cir += ".tran 10n 1m\n";
+  cir += "* .ac dec 100 10 100Meg\n";
+
+  return cir;
+}
+
+function downloadSpiceFile() {
+  const content = generateSpiceNetlist();
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'simulador_bjt.cir';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
